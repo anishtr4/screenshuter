@@ -113,22 +113,42 @@ useEffect(() => {
 }, [screenshotProgress])
 ```
 
-**3. State Management Pattern**
+**3. Unified Redux State Management Pattern**
 ```typescript
-// Zustand store for global state
-const useAuthStore = create<AuthState>((set) => ({
-  user: null,
-  token: null,
-  login: (user, token) => set({ user, token }),
-  logout: () => set({ user: null, token: null })
-}))
+// Redux Toolkit: Unified state management with persistence
+const { user, token } = useAppSelector((state) => state.auth)
+const { currentProject, screenshots, collections } = useAppSelector((state) => state.project)
+const dispatch = useAppDispatch()
 
-// React Query for server state
-const { data: projects, isLoading } = useQuery({
-  queryKey: ['projects'],
-  queryFn: () => apiClient.getProjects()
-})
+// Authentication actions
+const login = (userData, authToken, userLimits) => {
+  dispatch(setAuth({ 
+    user: userData, 
+    token: authToken, 
+    limits: userLimits 
+  }))
+}
+
+// Project actions
+const setProject = (project) => {
+  dispatch(setCurrentProject(project))
+}
+
+const addNewScreenshot = (screenshot) => {
+  dispatch(addScreenshot(screenshot))
+}
+
+// Custom hook for easier usage
+const { currentProject, screenshots, setCurrentProject, addScreenshot } = useProject()
 ```
+
+**Why Unified Redux?**
+- **Consistency**: Single state management pattern across the entire app
+- **DevTools**: Excellent debugging with Redux DevTools
+- **Persistence**: Built-in state persistence with redux-persist
+- **Predictability**: Clear action-based state updates
+- **Time Travel**: Debug by replaying actions
+- **Middleware**: Easy to add logging, analytics, etc.
 
 ### Backend Architecture (`/backend/src/`)
 

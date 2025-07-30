@@ -64,7 +64,7 @@ Capture, manage, and organize website screenshots with powerful features includi
 - **Language**: TypeScript
 - **UI Library**: shadcn/ui with Radix UI primitives
 - **Styling**: Tailwind CSS with CSS variables
-- **State Management**: Zustand for client state
+- **State Management**: Redux Toolkit with Redux Persist
 - **Data Fetching**: TanStack Query (React Query)
 - **Forms**: React Hook Form with Zod validation
 - **Theme**: next-themes for dark/light mode
