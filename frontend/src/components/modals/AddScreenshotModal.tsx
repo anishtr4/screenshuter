@@ -151,11 +151,30 @@ export function AddScreenshotModal({
       } finally {
         setLocalLoading(false)
       }
+    } else if (formData.mode === 'frame') {
+      // Frame screenshot with time intervals
+      try {
+        setLocalLoading(true)
+        const timeFrames = formData.frameOptions?.timeFrames || []
+        if (timeFrames.length === 0) {
+          toast.error('Please add at least one time frame')
+          return
+        }
+        
+        const data = await apiClient.createScreenshot(formData.url, formData.projectId, timeFrames)
+        toast.success(`Started capturing ${timeFrames.length} frame screenshots`)
+        
+        onSubmit(formData)
+        onClose() // Close modal on success
+      } catch (error) {
+        console.error('Error capturing frame screenshots:', error)
+        toast.error('Failed to start frame screenshot capture')
+      } finally {
+        setLocalLoading(false)
+      }
     } else {
       // Normal single page screenshot
-
       onSubmit(formData)
-
     }
   }
   
@@ -338,7 +357,7 @@ export function AddScreenshotModal({
               <label className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-3 block">
                 Capture Mode
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, mode: 'normal' }))}
@@ -390,6 +409,33 @@ export function AddScreenshotModal({
                   </div>
                   <p className="text-sm text-orange-600 dark:text-orange-400">
                     Discover and capture multiple pages from a website
+                  </p>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, mode: 'frame' }))}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                    formData.mode === 'frame'
+                      ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                      : "border-orange-200/50 dark:border-orange-700/50 hover:border-orange-300 dark:hover:border-orange-600"
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <Clock className={cn(
+                      "h-5 w-5",
+                      formData.mode === 'frame' ? "text-orange-600" : "text-orange-400"
+                    )} />
+                    <span className={cn(
+                      "font-medium",
+                      formData.mode === 'frame' ? "text-orange-900 dark:text-orange-100" : "text-orange-700 dark:text-orange-300"
+                    )}>
+                      Time Frames
+                    </span>
+                  </div>
+                  <p className="text-sm text-orange-600 dark:text-orange-400">
+                    Capture screenshots at specific time intervals
                   </p>
                 </button>
               </div>
@@ -474,6 +520,124 @@ export function AddScreenshotModal({
               </div>
             )}
 
+            {/* Frame Options */}
+            {formData.mode === 'frame' && (
+              <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-xl p-4 border border-orange-200/30 dark:border-orange-700/30">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                    Time Frame Settings
+                  </span>
+                </div>
+                
+                <div className="space-y-3">
+                  <label className="text-sm text-orange-700 dark:text-orange-300 block">
+                    Capture Times (seconds)
+                  </label>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
+                    Enter time intervals when screenshots should be taken (0-300 seconds)
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {formData.frameOptions?.timeFrames.map((time, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/30 rounded-lg px-3 py-1">
+                        <span className="text-sm text-orange-800 dark:text-orange-200">{time}s</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTimeFrames = formData.frameOptions?.timeFrames.filter((_, i) => i !== index) || []
+                            setFormData(prev => ({
+                              ...prev,
+                              frameOptions: { ...prev.frameOptions!, timeFrames: newTimeFrames }
+                            }))
+                          }}
+                          className="text-orange-600 hover:text-orange-800 ml-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="300"
+                      placeholder="Add time (seconds)"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const input = e.target as HTMLInputElement
+                          const time = parseInt(input.value)
+                          if (time >= 0 && time <= 300 && !formData.frameOptions?.timeFrames.includes(time)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              frameOptions: {
+                                ...prev.frameOptions!,
+                                timeFrames: [...(prev.frameOptions?.timeFrames || []), time].sort((a, b) => a - b)
+                              }
+                            }))
+                            input.value = ''
+                          }
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement
+                        const time = parseInt(input.value)
+                        if (time >= 0 && time <= 300 && !formData.frameOptions?.timeFrames.includes(time)) {
+                          setFormData(prev => ({
+                            ...prev,
+                            frameOptions: {
+                              ...prev.frameOptions!,
+                              timeFrames: [...(prev.frameOptions?.timeFrames || []), time].sort((a, b) => a - b)
+                            }
+                          }))
+                          input.value = ''
+                        }
+                      }}
+                      className="px-3 border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        frameOptions: { ...prev.frameOptions!, timeFrames: [0, 2, 5] }
+                      }))}
+                      className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Quick: 0s, 2s, 5s
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        frameOptions: { ...prev.frameOptions!, timeFrames: [0, 1, 3, 5, 10] }
+                      }))}
+                      className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Animation: 0s, 1s, 3s, 5s, 10s
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Settings */}
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -549,7 +713,8 @@ export function AddScreenshotModal({
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                     {localLoading ? 'Discovering URLs...' : 
-                     formData.mode === 'crawl' ? 'Crawling...' : 'Capturing...'}
+                     formData.mode === 'crawl' ? 'Crawling...' : 
+                     formData.mode === 'frame' ? 'Capturing Frames...' : 'Capturing...'}
                   </>
                 ) : (
                   <>
@@ -557,6 +722,11 @@ export function AddScreenshotModal({
                       <>
                         <Search className="h-4 w-4 mr-2" />
                         Start Crawl
+                      </>
+                    ) : formData.mode === 'frame' ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2" />
+                        Capture Frames
                       </>
                     ) : (
                       <>
