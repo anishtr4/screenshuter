@@ -33,6 +33,34 @@ agenda.define('capture-screenshot', async (job: any) => {
   }
 });
 
+agenda.define('capture-frame-screenshot', async (job: any) => {
+  const { screenshotId, url, projectId, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture } = job.attrs.data;
+  
+  logger.info(`Starting frame screenshot capture job for ${url} at ${frameDelay}s`, { 
+    screenshotId, projectId, userId, frameDelay, frameIndex, totalFrames 
+  });
+  
+  try {
+    const screenshotService = new ScreenshotService();
+    await screenshotService.captureFrameScreenshot({
+      screenshotId,
+      url,
+      projectId,
+      userId,
+      frameDelay,
+      frameIndex,
+      totalFrames,
+      autoScroll,
+      isScrollCapture
+    });
+    
+    logger.info(`Frame screenshot capture completed for ${url} at ${frameDelay}s`, { screenshotId });
+  } catch (error) {
+    logger.error(`Frame screenshot capture failed for ${url} at ${frameDelay}s:`, error);
+    throw error;
+  }
+});
+
 agenda.define('capture-crawl-screenshots', async (job: any) => {
   const { collectionId, urls, projectId, userId } = job.attrs.data;
   

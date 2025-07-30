@@ -44,6 +44,28 @@ router.post('/:id/pdf', generateProjectPDF);
 router.get('/:id', getProject);
 
 /**
+ * @route   GET /api/v1/projects/:id/screenshots
+ * @desc    Get all screenshots for a project
+ * @access  Private
+ */
+router.get('/:id/screenshots', async (req, res) => {
+  // This will be handled by importing from screenshot controller
+  const { getProjectScreenshots } = require('../controllers/screenshotController');
+  return getProjectScreenshots(req, res);
+});
+
+/**
+ * @route   GET /api/v1/projects/:id/collections
+ * @desc    Get all collections for a project
+ * @access  Private
+ */
+router.get('/:id/collections', async (req, res) => {
+  // This will be handled by importing from screenshot controller
+  const { getProjectCollections } = require('../controllers/screenshotController');
+  return getProjectCollections(req, res);
+});
+
+/**
  * @route   PUT /api/v1/projects/:id
  * @desc    Update a project
  * @access  Private

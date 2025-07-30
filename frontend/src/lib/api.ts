@@ -163,10 +163,18 @@ class ApiClient {
   }
 
   // Screenshot endpoints
-  async createScreenshot(url: string, projectId: string, timeFrames?: number[]) {
+  async createScreenshot(url: string, projectId: string, timeFrames?: number[], autoScroll?: {
+    enabled: boolean;
+    selector: string;
+    stepSize: number;
+    interval: number;
+  }) {
     const payload: any = { url, projectId }
     if (timeFrames && timeFrames.length > 0) {
       payload.timeFrames = timeFrames
+    }
+    if (autoScroll) {
+      payload.autoScroll = autoScroll
     }
     const response = await this.client.post('/screenshots', payload)
     return response.data
@@ -187,6 +195,16 @@ class ApiClient {
 
   async getScreenshot(id: string) {
     const response = await this.client.get(`/screenshots/${id}`)
+    return response.data
+  }
+
+  async getProjectScreenshots(projectId: string, page = 1, limit = 20) {
+    const response = await this.client.get(`/projects/${projectId}/screenshots?page=${page}&limit=${limit}`)
+    return response.data
+  }
+
+  async getProjectCollections(projectId: string, page = 1, limit = 20) {
+    const response = await this.client.get(`/projects/${projectId}/collections?page=${page}&limit=${limit}`)
     return response.data
   }
 

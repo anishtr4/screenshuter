@@ -5,7 +5,7 @@ export interface IScreenshot extends Document {
   url: string;
   imagePath?: string;
   thumbnailPath?: string;
-  type: 'normal' | 'crawl' | 'frame';
+  type: 'normal' | 'crawl' | 'frame' | 'scroll';
   collectionId?: mongoose.Types.ObjectId;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   errorMessage?: string;
@@ -18,6 +18,10 @@ export interface IScreenshot extends Document {
     frameDelay?: number; // Time delay in seconds for frame capture
     frameIndex?: number; // Index of frame in sequence
     totalFrames?: number; // Total number of frames in sequence
+    scrollPosition?: number; // Scroll position for auto-scroll captures
+    scrollIndex?: number; // Index of scroll screenshot in sequence
+    isAutoScroll?: boolean; // Flag indicating this is an auto-scroll capture
+    scrollType?: string; // Type of scrolling (tinyscrollbar, standard, etc.)
   };
   createdAt: Date;
 }
@@ -43,7 +47,7 @@ const screenshotSchema = new Schema<IScreenshot>({
   },
   type: {
     type: String,
-    enum: ['normal', 'crawl', 'frame'],
+    enum: ['normal', 'crawl', 'frame', 'scroll'],
     required: true
   },
   collectionId: {
@@ -67,7 +71,11 @@ const screenshotSchema = new Schema<IScreenshot>({
     capturedAt: Date,
     frameDelay: Number,
     frameIndex: Number,
-    totalFrames: Number
+    totalFrames: Number,
+    scrollPosition: Number,
+    scrollIndex: Number,
+    isAutoScroll: Boolean,
+    scrollType: String
   },
   createdAt: {
     type: Date,

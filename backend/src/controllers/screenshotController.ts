@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import { Screenshot } from '../models/Screenshot';
 import { Collection } from '../models/Collection';
 import { Project } from '../models/Project';
@@ -13,8 +14,23 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     throw createError('User not authenticated', 401);
   }
 
-  const { url, projectId, type = 'normal', timeFrames } = req.body;
+  const { url, projectId, type = 'normal', timeFrames, autoScroll } = req.body;
   const userId = req.user.id;
+  
+  // Debug logging for autoScroll
+  logger.info(`📝 Screenshot request received`, {
+    url,
+    projectId,
+    timeFrames,
+    autoScroll,
+    hasAutoScroll: !!autoScroll,
+    autoScrollEnabled: autoScroll?.enabled
+  });
+
+  // Validate project ID format
+  if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
+    throw createError('Invalid project ID format', 400);
+  }
 
   // Verify project ownership
   const project = await Project.findOne({ _id: projectId, userId });
@@ -46,7 +62,8 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       type: 'frame',
       metadata: {
         frameCount: validTimeFrames.length,
-        timeFrames: validTimeFrames
+        timeFrames: validTimeFrames,
+        autoScroll: autoScroll || null
       }
     });
 
@@ -74,17 +91,38 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       await screenshot.save();
       screenshots.push(screenshot);
 
-      // Schedule frame screenshot capture job
-      await agenda.now('capture-frame-screenshot', {
+      // Debug logging for job data
+      const jobData = {
         screenshotId: screenshot._id.toString(),
         url,
         projectId,
         userId,
         frameDelay,
         frameIndex: i + 1,
-        totalFrames: validTimeFrames.length
+        totalFrames: validTimeFrames.length,
+        autoScroll: autoScroll || null,
+        isScrollCapture: false
+      };
+      
+      logger.info(`💼 Scheduling frame job`, {
+        frameIndex: i + 1,
+        autoScroll: jobData.autoScroll,
+        autoScrollEnabled: jobData.autoScroll?.enabled
       });
+      
+      // Schedule frame screenshot capture job
+      await agenda.now('capture-frame-screenshot', jobData);
     }
+
+    // Emit initial collection progress
+    const { io } = require('../index');
+    io.to(`user-${userId}`).emit('collection-progress', {
+      collectionId: collection._id.toString(),
+      totalScreenshots: validTimeFrames.length,
+      completedScreenshots: 0,
+      progress: 0,
+      stage: `Starting ${validTimeFrames.length} frame captures...`
+    });
 
     logger.info(`Frame screenshot jobs scheduled for ${url}`, { 
       collectionId: collection._id,
@@ -167,6 +205,11 @@ export const createCrawlScreenshot = asyncHandler(async (req: Request, res: Resp
 
   const { baseUrl, projectId } = req.body;
   const userId = req.user.id;
+
+  // Validate project ID format
+  if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
+    throw createError('Invalid project ID format', 400);
+  }
 
   // Verify project ownership
   const project = await Project.findOne({ _id: projectId, userId });
@@ -384,6 +427,109 @@ export const deleteScreenshot = asyncHandler(async (req: Request, res: Response)
 
   res.json({
     message: 'Screenshot deleted successfully'
+  });
+});
+
+export const getProjectScreenshots = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw createError('User not authenticated', 401);
+  }
+
+  const { id: projectId } = req.params;
+  const userId = req.user.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const skip = (page - 1) * limit;
+
+  // Validate project ID format
+  if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
+    throw createError('Invalid project ID format', 400);
+  }
+
+  // Verify project ownership
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) {
+    throw createError('Project not found', 404);
+  }
+
+  // Get individual screenshots (not part of collections)
+  const screenshots = await Screenshot.find({ 
+    projectId, 
+    collectionId: { $exists: false } // Only individual screenshots
+  })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .select('_id url imagePath thumbnailPath type status errorMessage metadata createdAt');
+
+  const total = await Screenshot.countDocuments({ 
+    projectId, 
+    collectionId: { $exists: false }
+  });
+
+  res.json({
+    screenshots,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
+  });
+});
+
+export const getProjectCollections = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw createError('User not authenticated', 401);
+  }
+
+  const { id: projectId } = req.params;
+  const userId = req.user.id;
+  const page = parseInt(req.query.page as string) || 1;
+  const limit = parseInt(req.query.limit as string) || 20;
+  const skip = (page - 1) * limit;
+
+  // Validate project ID format
+  if (!projectId || !mongoose.Types.ObjectId.isValid(projectId)) {
+    throw createError('Invalid project ID format', 400);
+  }
+
+  // Verify project ownership
+  const project = await Project.findOne({ _id: projectId, userId });
+  if (!project) {
+    throw createError('Project not found', 404);
+  }
+
+  // Get all collections for this project
+  const collections = await Collection.find({ projectId })
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limit)
+    .select('_id baseUrl name type metadata createdAt');
+
+  // Get screenshot counts for each collection
+  const collectionsWithCounts = await Promise.all(
+    collections.map(async (collection) => {
+      const screenshotCount = await Screenshot.countDocuments({ 
+        collectionId: collection._id 
+      });
+      return {
+        ...collection.toObject(),
+        screenshotCount
+      };
+    })
+  );
+
+  const total = await Collection.countDocuments({ projectId });
+
+  res.json({
+    collections: collectionsWithCounts,
+    pagination: {
+      page,
+      limit,
+      total,
+      pages: Math.ceil(total / limit)
+    }
   });
 });
 

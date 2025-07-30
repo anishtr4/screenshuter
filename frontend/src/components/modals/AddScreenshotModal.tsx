@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Search,
   Settings,
-  Clock
+  Clock,
+  ScrollText,
+  ArrowDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -33,6 +35,12 @@ export interface ScreenshotFormData {
   }
   frameOptions?: {
     timeFrames: number[]
+    autoScroll: {
+      enabled: boolean
+      selector: string
+      stepSize: number
+      interval: number
+    }
   }
   // New crawl workflow properties
   selectedUrls?: string[]
@@ -70,7 +78,13 @@ export function AddScreenshotModal({
       includeExternal: false
     },
     frameOptions: {
-      timeFrames: [0, 2, 5] // Default: capture at 0s, 2s, and 5s
+      timeFrames: [0, 2, 5], // Default: capture at 0s, 2s, and 5s
+      autoScroll: {
+        enabled: false,
+        selector: 'window', // Default to window scroll
+        stepSize: 500, // Scroll 500px at a time
+        interval: 1000 // Wait 1 second between scrolls
+      }
     }
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -161,10 +175,11 @@ export function AddScreenshotModal({
           return
         }
         
-        const data = await apiClient.createScreenshot(formData.url, formData.projectId, timeFrames)
+        const data = await apiClient.createScreenshot(formData.url, formData.projectId, timeFrames, formData.frameOptions?.autoScroll)
         toast.success(`Started capturing ${timeFrames.length} frame screenshots`)
         
-        onSubmit(formData)
+        // Don't call onSubmit for frame screenshots as API call is already made
+        // onSubmit(formData) // This would trigger a second API call
         onClose() // Close modal on success
       } catch (error) {
         console.error('Error capturing frame screenshots:', error)
@@ -633,6 +648,140 @@ export function AddScreenshotModal({
                     >
                       Animation: 0s, 1s, 3s, 5s, 10s
                     </Button>
+                  </div>
+                  
+                  {/* Auto-Scroll Configuration */}
+                  <div className="mt-6 pt-4 border-t border-orange-200/50 dark:border-orange-700/50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ScrollText className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                        Auto-Scroll Settings
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Enable Auto-Scroll Toggle */}
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="autoScrollEnabled"
+                          checked={formData.frameOptions?.autoScroll.enabled || false}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            frameOptions: {
+                              ...prev.frameOptions!,
+                              autoScroll: {
+                                ...prev.frameOptions!.autoScroll,
+                                enabled: e.target.checked
+                              }
+                            }
+                          }))}
+                          className="rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <label htmlFor="autoScrollEnabled" className="text-sm text-orange-700 dark:text-orange-300">
+                          Enable auto-scroll after capturing time frames
+                        </label>
+                      </div>
+                      
+                      {/* Auto-Scroll Options (only show when enabled) */}
+                      {formData.frameOptions?.autoScroll.enabled && (
+                        <div className="grid grid-cols-1 gap-4 pl-6 border-l-2 border-orange-200 dark:border-orange-700">
+                          <div>
+                            <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                              Scroll Selector
+                            </label>
+                            <Input
+                              type="text"
+                              value={formData.frameOptions?.autoScroll.selector || 'window'}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                frameOptions: {
+                                  ...prev.frameOptions!,
+                                  autoScroll: {
+                                    ...prev.frameOptions!.autoScroll,
+                                    selector: e.target.value
+                                  }
+                                }
+                              }))}
+                              placeholder="window, body, .container, #content"
+                              className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                            />
+                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                              CSS selector for scrollable element (default: 'window')
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                                Step Size (px)
+                              </label>
+                              <Input
+                                type="number"
+                                min="100"
+                                max="2000"
+                                step="50"
+                                value={formData.frameOptions?.autoScroll.stepSize || 500}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  frameOptions: {
+                                    ...prev.frameOptions!,
+                                    autoScroll: {
+                                      ...prev.frameOptions!.autoScroll,
+                                      stepSize: parseInt(e.target.value) || 500
+                                    }
+                                  }
+                                }))}
+                                className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                              />
+                              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                Pixels to scroll per step
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                                Interval (ms)
+                              </label>
+                              <Input
+                                type="number"
+                                min="500"
+                                max="5000"
+                                step="100"
+                                value={formData.frameOptions?.autoScroll.interval || 1000}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  frameOptions: {
+                                    ...prev.frameOptions!,
+                                    autoScroll: {
+                                      ...prev.frameOptions!.autoScroll,
+                                      interval: parseInt(e.target.value) || 1000
+                                    }
+                                  }
+                                }))}
+                                className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                              />
+                              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                Wait time between scrolls
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-orange-50/50 dark:bg-orange-900/20 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <ArrowDown className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-orange-700 dark:text-orange-300">
+                                <p className="font-medium mb-1">How auto-scroll works:</p>
+                                <p>1. Captures time-based frames first ({formData.frameOptions?.timeFrames.length || 0} frames)</p>
+                                <p>2. Starts scrolling by {formData.frameOptions?.autoScroll.stepSize || 500}px every {formData.frameOptions?.autoScroll.interval || 1000}ms</p>
+                                <p>3. Takes a screenshot at each scroll position</p>
+                                <p>4. Continues until reaching the end of the page</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
