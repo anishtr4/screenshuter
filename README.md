@@ -12,16 +12,24 @@ Capture, manage, and organize website screenshots with powerful features includi
 
 ## 🎯 Recent Updates & Fixes
 
-### ✅ Collection Modal Image Stability (Latest Fix)
+### 🔄 State Management Unification (Latest)
+- **Migrated**: From hybrid Redux+Zustand to unified Redux Toolkit approach
+- **Removed**: Zustand dependency completely for consistency
+- **Added**: New `projectSlice` and `useProject` hook for better state management
+- **Benefits**: Single source of truth, better debugging, time-travel debugging
+- **Impact**: Cleaner codebase with consistent state management patterns
+
+### ✅ Collection Modal Image Stability
 - **Fixed**: Blob URL premature revocation causing broken images in collection modals
 - **Solution**: Implemented stable blob URL cache with proper lifecycle management
 - **Impact**: Collection modal images now remain stable across real-time socket updates
 - **Technical**: Changed cleanup effect dependency from `[imageUrls]` to `[]` to prevent premature cleanup
 
-### 🧹 Code Quality Improvements
+### 🧹 Code Quality & Security
 - **Removed**: All debug console.log statements from production code
 - **Security**: Removed hardcoded test API keys and secrets
 - **Clean**: Production-ready codebase with proper error handling
+- **Documentation**: Comprehensive developer onboarding and technical guides
 
 ## 🚀 Features
 
@@ -328,7 +336,7 @@ screenshot-saas/
 **Frontend Architecture:**
 - **Next.js 14**: App Router with server/client components
 - **shadcn/ui**: Component library built on Radix UI
-- **Zustand**: Lightweight state management
+- **Redux Toolkit**: Unified state management with persistence
 - **TanStack Query**: Server state management and caching
 - **React Hook Form**: Form handling with validation
 - **Tailwind CSS**: Utility-first styling
@@ -370,7 +378,36 @@ socket.on('screenshot-progress', (data: ScreenshotProgress) => {
 })
 ```
 
-#### 🛠️ Development Workflow
+**4. Redux State Management (Recently Unified)**
+```typescript
+// Redux store structure
+{
+  auth: {
+    user: User | null,
+    token: string | null,
+    isAuthenticated: boolean,
+    limits: UserLimits | null
+  },
+  project: {
+    currentProject: Project | null,
+    screenshots: Screenshot[],
+    collections: Collection[],
+    isLoading: boolean,
+    error: string | null
+  }
+}
+
+// Usage with custom hooks
+const { user, token, login, logout } = useAuth()
+const { currentProject, screenshots, setCurrentProject, addScreenshot } = useProject()
+
+// Direct Redux usage
+const { user } = useAppSelector((state) => state.auth)
+const dispatch = useAppDispatch()
+dispatch(setCurrentProject(project))
+```
+
+#### 🔧 Development Workflow
 
 **1. Setting Up Development Environment:**
 ```bash
@@ -412,6 +449,12 @@ npm run dev
 2. Create migration script if needed
 3. Update TypeScript interfaces
 4. Test with existing data
+
+*Adding New State Management:*
+1. Add actions to appropriate slice in `/frontend/src/store/slices/`
+2. Update TypeScript interfaces in slice
+3. Add selectors to custom hooks (`useAuth`, `useProject`)
+4. Test state updates with Redux DevTools
 
 #### 🔍 Debugging & Troubleshooting
 
