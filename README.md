@@ -1,6 +1,27 @@
-# Screenshot SaaS
+# Screenshot SaaS 📸
 
-A production-quality Screenshot-as-a-Service platform built with modern technologies. Capture, manage, and organize website screenshots with powerful features including project management, role-based access control, API integration, and website crawling capabilities.
+> A production-ready Screenshot-as-a-Service platform built with modern technologies
+
+Capture, manage, and organize website screenshots with powerful features including project management, role-based access control, API integration, and website crawling capabilities.
+
+[![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![Next.js](https://img.shields.io/badge/Next.js-000000?style=for-the-badge&logo=next.js&logoColor=white)](https://nextjs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-43853D?style=for-the-badge&logo=node.js&logoColor=white)](https://nodejs.org/)
+[![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
+[![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
+
+## 🎯 Recent Updates & Fixes
+
+### ✅ Collection Modal Image Stability (Latest Fix)
+- **Fixed**: Blob URL premature revocation causing broken images in collection modals
+- **Solution**: Implemented stable blob URL cache with proper lifecycle management
+- **Impact**: Collection modal images now remain stable across real-time socket updates
+- **Technical**: Changed cleanup effect dependency from `[imageUrls]` to `[]` to prevent premature cleanup
+
+### 🧹 Code Quality Improvements
+- **Removed**: All debug console.log statements from production code
+- **Security**: Removed hardcoded test API keys and secrets
+- **Clean**: Production-ready codebase with proper error handling
 
 ## 🚀 Features
 
@@ -260,6 +281,229 @@ docker-compose -f docker-compose.prod.yml up -d
 - \`PATCH /api/v1/users/:id\`: Update user
 - \`GET /api/v1/configs\`: Get system configuration
 - \`PATCH /api/v1/configs/:id\`: Update configuration
+
+## 👥 Developer Onboarding & Knowledge Transfer
+
+### 🎯 For New Developers
+
+Welcome to the Screenshot SaaS project! This section will help you understand the codebase and get productive quickly.
+
+#### 🏗️ Project Structure
+```
+screenshot-saas/
+├── backend/                 # Node.js/Express API server
+│   ├── src/
+│   │   ├── controllers/     # Route handlers and business logic
+│   │   ├── models/         # MongoDB/Mongoose schemas
+│   │   ├── routes/         # API route definitions
+│   │   ├── middleware/     # Authentication, validation, error handling
+│   │   ├── services/       # Business logic and external integrations
+│   │   └── utils/          # Helper functions and utilities
+│   ├── uploads/            # File storage directory
+│   └── package.json
+├── frontend/               # Next.js React application
+│   ├── src/
+│   │   ├── app/           # Next.js 14 App Router pages
+│   │   ├── components/    # Reusable React components
+│   │   ├── hooks/         # Custom React hooks
+│   │   ├── lib/           # Utility libraries and API client
+│   │   ├── store/         # Zustand state management
+│   │   └── types/         # TypeScript type definitions
+│   └── package.json
+├── docker-compose.yml      # Development environment
+└── README.md              # This file
+```
+
+#### 🔧 Key Technologies & Patterns
+
+**Backend Architecture:**
+- **Express.js**: RESTful API with middleware pattern
+- **Mongoose**: MongoDB ODM with schema validation
+- **Agenda.js**: Job queue for async screenshot processing
+- **Playwright**: Browser automation for screenshot capture
+- **Socket.io**: Real-time updates for screenshot progress
+- **JWT**: Stateless authentication
+- **Winston**: Structured logging
+
+**Frontend Architecture:**
+- **Next.js 14**: App Router with server/client components
+- **shadcn/ui**: Component library built on Radix UI
+- **Zustand**: Lightweight state management
+- **TanStack Query**: Server state management and caching
+- **React Hook Form**: Form handling with validation
+- **Tailwind CSS**: Utility-first styling
+
+#### 🚨 Critical Code Areas (Recently Fixed)
+
+**1. Blob URL Management (`/frontend/src/app/projects/[id]/page.tsx`)**
+```typescript
+// CRITICAL: Blob URLs are cached in useRef to prevent premature revocation
+const blobUrlCacheRef = useRef<Record<string, string>>({})
+
+// Cleanup effect runs ONLY on unmount, not on every state change
+useEffect(() => {
+  return () => {
+    Object.values(blobUrlCacheRef.current).forEach(url => {
+      if (url.startsWith('blob:')) {
+        URL.revokeObjectURL(url)
+      }
+    })
+  }
+}, []) // Empty dependency array is crucial!
+```
+
+**2. Socket Updates & Image Loading**
+- Socket updates trigger selective image reloading
+- Collection frame images are loaded once during initial load
+- Single screenshot images are reloaded on completion
+- Modal uses parent's stable `imageUrls` state for consistency
+
+**3. Real-time Updates (`/frontend/src/hooks/useSocket.ts`)**
+```typescript
+// WebSocket connection manages screenshot progress
+// Automatically reconnects and handles user-specific rooms
+socket.on('screenshot-progress', (data: ScreenshotProgress) => {
+  setScreenshotProgress(prev => ({
+    ...prev,
+    [data.screenshotId]: data
+  }))
+})
+```
+
+#### 🛠️ Development Workflow
+
+**1. Setting Up Development Environment:**
+```bash
+# Clone and setup
+git clone <repo-url>
+cd screenshot-saas
+
+# Backend setup
+cd backend
+cp .env.example .env
+# Edit .env with your MongoDB URI and other configs
+npm install
+npm run dev
+
+# Frontend setup (new terminal)
+cd frontend
+echo "NEXT_PUBLIC_API_URL=http://localhost:3001" > .env.local
+echo "NEXT_PUBLIC_WS_URL=http://localhost:3001" >> .env.local
+npm install
+npm run dev
+```
+
+**2. Common Development Tasks:**
+
+*Adding a New API Endpoint:*
+1. Create controller in `/backend/src/controllers/`
+2. Add route in `/backend/src/routes/`
+3. Add TypeScript types in `/frontend/src/types/`
+4. Update API client in `/frontend/src/lib/api.ts`
+
+*Adding a New UI Component:*
+1. Create component in `/frontend/src/components/`
+2. Follow shadcn/ui patterns for consistency
+3. Add to Storybook if complex
+4. Export from appropriate index file
+
+*Database Schema Changes:*
+1. Update Mongoose model in `/backend/src/models/`
+2. Create migration script if needed
+3. Update TypeScript interfaces
+4. Test with existing data
+
+#### 🔍 Debugging & Troubleshooting
+
+**Common Issues:**
+
+1. **Broken Images in Collection Modal**
+   - Check blob URL cache in browser DevTools
+   - Verify cleanup effect dependency array is empty
+   - Ensure `imageUrls` state is passed correctly to modal
+
+2. **WebSocket Connection Issues**
+   - Check CORS settings in backend
+   - Verify `NEXT_PUBLIC_WS_URL` environment variable
+   - Monitor connection status in useSocket hook
+
+3. **Screenshot Processing Stuck**
+   - Check Agenda.js job queue in MongoDB
+   - Verify Playwright browser installation
+   - Check file permissions in uploads directory
+
+**Debugging Tools:**
+- **Backend**: Winston logs in console and files
+- **Frontend**: React DevTools, Redux DevTools (Zustand)
+- **Database**: MongoDB Compass for data inspection
+- **Network**: Browser DevTools Network tab
+- **WebSocket**: Browser DevTools WebSocket frames
+
+#### 📊 Performance Considerations
+
+**Frontend Optimizations:**
+- Image lazy loading with Next.js Image component
+- Blob URL caching to prevent unnecessary fetches
+- Virtualization for large screenshot lists
+- Debounced search and filtering
+
+**Backend Optimizations:**
+- Agenda.js job queue for async processing
+- MongoDB indexing on frequently queried fields
+- Image thumbnail generation with Sharp
+- Authenticated file serving with proper caching headers
+
+#### 🔐 Security Best Practices
+
+**Authentication & Authorization:**
+- JWT tokens with proper expiration
+- Role-based access control (RBAC)
+- API rate limiting
+- Input validation with Joi/Zod
+
+**File Security:**
+- Authenticated image serving
+- File type validation
+- Path traversal prevention
+- Secure file storage outside web root
+
+#### 🧪 Testing Strategy
+
+**Backend Testing:**
+```bash
+cd backend
+npm test              # Run all tests
+npm run test:watch    # Watch mode
+npm run test:coverage # Coverage report
+```
+
+**Frontend Testing:**
+```bash
+cd frontend
+npm test              # Jest + React Testing Library
+npm run test:e2e      # Playwright E2E tests
+npm run test:visual   # Visual regression tests
+```
+
+**Test Categories:**
+- **Unit Tests**: Individual functions and components
+- **Integration Tests**: API endpoints and database operations
+- **E2E Tests**: Complete user workflows
+- **Visual Tests**: UI component snapshots
+
+#### 📈 Monitoring & Observability
+
+**Production Monitoring:**
+- Winston structured logging
+- Error tracking with proper error boundaries
+- Performance monitoring with Web Vitals
+- Database query performance monitoring
+
+**Development Monitoring:**
+- Hot reload for rapid development
+- TypeScript strict mode for type safety
+- ESLint for code quality
+- Prettier for consistent formatting
 
 ## 🤝 Contributing
 
