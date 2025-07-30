@@ -53,8 +53,22 @@ export const validateScreenshot = [
     .withMessage('Invalid project ID'),
   body('type')
     .optional()
-    .isIn(['normal', 'crawl'])
-    .withMessage('Type must be either normal or crawl'),
+    .isIn(['normal', 'crawl', 'frame'])
+    .withMessage('Type must be normal, crawl, or frame'),
+  body('timeFrames')
+    .optional()
+    .isArray()
+    .withMessage('Time frames must be an array'),
+  body('timeFrames.*')
+    .optional()
+    .isNumeric()
+    .custom((value) => {
+      const num = Number(value);
+      if (num < 0 || num > 300) {
+        throw new Error('Each time frame must be between 0 and 300 seconds');
+      }
+      return true;
+    }),
   handleValidationErrors
 ];
 

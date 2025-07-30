@@ -19,7 +19,7 @@ import { apiClient } from '@/lib/api'
 export interface ScreenshotFormData {
   url: string
   projectId: string
-  mode: 'normal' | 'crawl'
+  mode: 'normal' | 'crawl' | 'frame'
   options: {
     fullPage: boolean
     width: number
@@ -30,6 +30,9 @@ export interface ScreenshotFormData {
     maxDepth: number
     maxPages: number
     includeExternal: boolean
+  }
+  frameOptions?: {
+    timeFrames: number[]
   }
   // New crawl workflow properties
   selectedUrls?: string[]
@@ -65,6 +68,9 @@ export function AddScreenshotModal({
       maxDepth: 2,
       maxPages: 10,
       includeExternal: false
+    },
+    frameOptions: {
+      timeFrames: [0, 2, 5] // Default: capture at 0s, 2s, and 5s
     }
   })
   const [errors, setErrors] = useState<Record<string, string>>({})

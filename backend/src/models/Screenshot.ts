@@ -5,7 +5,7 @@ export interface IScreenshot extends Document {
   url: string;
   imagePath?: string;
   thumbnailPath?: string;
-  type: 'normal' | 'crawl';
+  type: 'normal' | 'crawl' | 'frame';
   collectionId?: mongoose.Types.ObjectId;
   status: 'pending' | 'processing' | 'completed' | 'failed';
   errorMessage?: string;
@@ -15,6 +15,9 @@ export interface IScreenshot extends Document {
     height?: number;
     fileSize?: number;
     capturedAt?: Date;
+    frameDelay?: number; // Time delay in seconds for frame capture
+    frameIndex?: number; // Index of frame in sequence
+    totalFrames?: number; // Total number of frames in sequence
   };
   createdAt: Date;
 }
@@ -40,7 +43,7 @@ const screenshotSchema = new Schema<IScreenshot>({
   },
   type: {
     type: String,
-    enum: ['normal', 'crawl'],
+    enum: ['normal', 'crawl', 'frame'],
     required: true
   },
   collectionId: {
@@ -61,7 +64,10 @@ const screenshotSchema = new Schema<IScreenshot>({
     width: Number,
     height: Number,
     fileSize: Number,
-    capturedAt: Date
+    capturedAt: Date,
+    frameDelay: Number,
+    frameIndex: Number,
+    totalFrames: Number
   },
   createdAt: {
     type: Date,

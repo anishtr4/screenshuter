@@ -163,8 +163,12 @@ class ApiClient {
   }
 
   // Screenshot endpoints
-  async createScreenshot(url: string, projectId: string) {
-    const response = await this.client.post('/screenshots', { url, projectId })
+  async createScreenshot(url: string, projectId: string, timeFrames?: number[]) {
+    const payload: any = { url, projectId }
+    if (timeFrames && timeFrames.length > 0) {
+      payload.timeFrames = timeFrames
+    }
+    const response = await this.client.post('/screenshots', payload)
     return response.data
   }
 

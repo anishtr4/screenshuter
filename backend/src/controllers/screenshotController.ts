@@ -13,7 +13,7 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     throw createError('User not authenticated', 401);
   }
 
-  const { url, projectId, type = 'normal' } = req.body;
+  const { url, projectId, type = 'normal', timeFrames } = req.body;
   const userId = req.user.id;
 
   // Verify project ownership
@@ -22,47 +22,143 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     throw createError('Project not found', 404);
   }
 
-  // Check screenshot limits
-  await checkScreenshotLimits(userId);
+  // Handle frame screenshots (multiple time-based captures)
+  if (timeFrames && Array.isArray(timeFrames) && timeFrames.length > 0) {
+    // Validate time frames (should be array of numbers in seconds)
+    const validTimeFrames = timeFrames.filter(time => 
+      typeof time === 'number' && time >= 0 && time <= 300 // Max 5 minutes
+    );
 
-  // Create screenshot record
-  const screenshot = new Screenshot({
-    projectId,
-    url,
-    imagePath: '', // Will be updated when captured
-    type,
-    status: 'pending'
-  });
-
-  await screenshot.save();
-
-  // Schedule screenshot capture job
-  await agenda.now('capture-screenshot', {
-    screenshotId: screenshot._id.toString(),
-    url,
-    projectId,
-    userId,
-    type
-  });
-
-  logger.info(`Screenshot job scheduled for ${url}`, { 
-    screenshotId: screenshot._id, 
-    projectId, 
-    userId 
-  });
-
-  res.status(201).json({
-    message: 'Screenshot capture scheduled',
-    screenshot: {
-      id: screenshot._id,
-      projectId: screenshot.projectId,
-      url: screenshot.url,
-      type: screenshot.type,
-      status: screenshot.status,
-      createdAt: screenshot.createdAt
+    if (validTimeFrames.length === 0) {
+      throw createError('At least one valid time frame is required (0-300 seconds)', 400);
     }
-  });
+
+    // Check screenshot limits (multiply by number of frames)
+    for (let i = 0; i < validTimeFrames.length; i++) {
+      await checkScreenshotLimits(userId);
+    }
+
+    // Create collection for frame screenshots
+    const collection = new Collection({
+      projectId,
+      baseUrl: url,
+      name: `Frame Screenshots of ${new URL(url).hostname} - ${new Date().toLocaleDateString()}`,
+      type: 'frame',
+      metadata: {
+        frameCount: validTimeFrames.length,
+        timeFrames: validTimeFrames
+      }
+    });
+
+    await collection.save();
+
+    // Create screenshot records for each time frame
+    const screenshots = [];
+    for (let i = 0; i < validTimeFrames.length; i++) {
+      const frameDelay = validTimeFrames[i];
+      
+      const screenshot = new Screenshot({
+        projectId,
+        url,
+        imagePath: '', // Will be updated when captured
+        type: 'frame',
+        collectionId: collection._id,
+        status: 'pending',
+        metadata: {
+          frameDelay,
+          frameIndex: i + 1,
+          totalFrames: validTimeFrames.length
+        }
+      });
+
+      await screenshot.save();
+      screenshots.push(screenshot);
+
+      // Schedule frame screenshot capture job
+      await agenda.now('capture-frame-screenshot', {
+        screenshotId: screenshot._id.toString(),
+        url,
+        projectId,
+        userId,
+        frameDelay,
+        frameIndex: i + 1,
+        totalFrames: validTimeFrames.length
+      });
+    }
+
+    logger.info(`Frame screenshot jobs scheduled for ${url}`, { 
+      collectionId: collection._id,
+      frameCount: validTimeFrames.length,
+      timeFrames: validTimeFrames,
+      projectId, 
+      userId 
+    });
+
+    res.status(201).json({
+      message: 'Frame screenshot captures scheduled',
+      collection: {
+        id: collection._id,
+        projectId: collection.projectId,
+        baseUrl: collection.baseUrl,
+        name: collection.name,
+        createdAt: collection.createdAt
+      },
+      screenshots: screenshots.map(s => ({
+        id: s._id,
+        url: s.url,
+        frameDelay: s.metadata?.frameDelay,
+        frameIndex: s.metadata?.frameIndex,
+        status: s.status
+      })),
+      frameCount: validTimeFrames.length,
+      timeFrames: validTimeFrames
+    });
+  } else {
+    // Handle regular single screenshot
+    // Check screenshot limits
+    await checkScreenshotLimits(userId);
+
+    // Create screenshot record
+    const screenshot = new Screenshot({
+      projectId,
+      url,
+      imagePath: '', // Will be updated when captured
+      type,
+      status: 'pending'
+    });
+
+    await screenshot.save();
+
+    // Schedule screenshot capture job
+    await agenda.now('capture-screenshot', {
+      screenshotId: screenshot._id.toString(),
+      url,
+      projectId,
+      userId,
+      type
+    });
+
+    logger.info(`Screenshot job scheduled for ${url}`, { 
+      screenshotId: screenshot._id, 
+      projectId, 
+      userId 
+    });
+
+    res.status(201).json({
+      message: 'Screenshot capture scheduled',
+      screenshot: {
+        id: screenshot._id,
+        projectId: screenshot.projectId,
+        url: screenshot.url,
+        type: screenshot.type,
+        status: screenshot.status,
+        createdAt: screenshot.createdAt
+      }
+    });
+  }
 });
+
+
 
 export const createCrawlScreenshot = asyncHandler(async (req: Request, res: Response) => {
   if (!req.user) {
@@ -90,7 +186,11 @@ export const createCrawlScreenshot = asyncHandler(async (req: Request, res: Resp
     const collection = new Collection({
       projectId,
       baseUrl,
-      name: `Crawl of ${new URL(baseUrl).hostname} - ${new Date().toLocaleDateString()}`
+      name: `Crawl of ${new URL(baseUrl).hostname} - ${new Date().toLocaleDateString()}`,
+      type: 'crawl',
+      metadata: {
+        totalUrls: urls.length
+      }
     });
 
     await collection.save();
