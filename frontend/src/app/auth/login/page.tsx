@@ -53,45 +53,50 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-2 mb-4">
-            <Camera className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Screenshot SaaS</span>
-          </div>
-          <h1 className="text-2xl font-semibold">Welcome back</h1>
-          <p className="text-muted-foreground">Sign in to your account</p>
-        </div>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Sign In</CardTitle>
-            <CardDescription>
-              Enter your email and password to access your account
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 dark:from-orange-950 dark:via-amber-950 dark:to-orange-900 p-4 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-300/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-300/30 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style={{animationDelay: '3s'}}></div>
+        <div className="absolute top-40 left-40 w-80 h-80 bg-orange-400/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style={{animationDelay: '6s'}}></div>
+      </div>
+      
+      <div className="w-full max-w-md relative z-10">
+        <Card className="bg-white/80 dark:bg-orange-900/20 backdrop-blur-md border-orange-200/50 dark:border-orange-700/30 shadow-2xl">
+          <CardHeader className="text-center pb-2">
+            <div className="flex items-center justify-center space-x-3 mb-4">
+              <div className="p-2 bg-orange-500/20 backdrop-blur-sm rounded-xl border border-orange-300/30">
+                <Camera className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+              </div>
+              <span className="text-2xl font-bold text-orange-900 dark:text-orange-100">Screenshot SaaS</span>
+            </div>
+            <CardTitle className="text-2xl font-bold text-orange-900 dark:text-orange-100">Sign In</CardTitle>
+            <CardDescription className="text-orange-700 dark:text-orange-300">
+              Enter your credentials to access your account
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <CardContent className="pt-6">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-2">
-                <label htmlFor="email" className="text-sm font-medium">
-                  Email
+                <label htmlFor="email" className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                  Email Address
                 </label>
                 <Input
                   id="email"
                   type="email"
                   placeholder="Enter your email"
                   {...register('email')}
-                  className={errors.email ? 'border-destructive' : ''}
+                  className={`bg-white/50 dark:bg-orange-800/20 border-orange-200 dark:border-orange-700/50 text-orange-900 dark:text-orange-100 placeholder:text-orange-500 dark:placeholder:text-orange-400 focus:border-orange-400 focus:ring-orange-200 dark:focus:ring-orange-800/50 ${
+                    errors.email ? 'border-red-400 dark:border-red-500' : ''
+                  }`}
                 />
                 {errors.email && (
-                  <p className="text-sm text-destructive">{errors.email.message}</p>
+                  <p className="text-sm text-red-500 dark:text-red-400">{errors.email.message}</p>
                 )}
               </div>
 
               <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
+                <label htmlFor="password" className="text-sm font-medium text-orange-900 dark:text-orange-100">
                   Password
                 </label>
                 <div className="relative">
@@ -100,12 +105,14 @@ export default function LoginPage() {
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Enter your password"
                     {...register('password')}
-                    className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
+                    className={`bg-white/50 dark:bg-orange-800/20 border-orange-200 dark:border-orange-700/50 text-orange-900 dark:text-orange-100 placeholder:text-orange-500 dark:placeholder:text-orange-400 focus:border-orange-400 focus:ring-orange-200 dark:focus:ring-orange-800/50 pr-10 ${
+                      errors.password ? 'border-red-400 dark:border-red-500' : ''
+                    }`}
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 transition-colors"
                   >
                     {showPassword ? (
                       <EyeOff className="h-4 w-4" />
@@ -115,21 +122,32 @@ export default function LoginPage() {
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-destructive">{errors.password.message}</p>
+                  <p className="text-sm text-red-500 dark:text-red-400">{errors.password.message}</p>
                 )}
               </div>
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold py-3 rounded-lg transition-all duration-200 transform hover:scale-[1.02] shadow-lg" 
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <span>Signing in...</span>
+                  </div>
+                ) : (
+                  'Sign In'
+                )}
               </Button>
             </form>
 
-            <div className="mt-6 text-center">
-              <p className="text-sm text-muted-foreground">
+            <div className="mt-8 text-center">
+              <p className="text-sm text-orange-700 dark:text-orange-300">
                 Don't have an account?{' '}
                 <Link
                   href="/auth/signup"
-                  className="font-medium text-primary hover:underline"
+                  className="font-medium text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 underline underline-offset-4 transition-colors"
                 >
                   Sign up
                 </Link>
@@ -137,10 +155,10 @@ export default function LoginPage() {
             </div>
 
             {/* Demo Credentials */}
-            <div className="mt-4 p-3 bg-muted rounded-md">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Demo Credentials:</p>
-              <p className="text-xs text-muted-foreground">
-                <strong>Admin:</strong> admin@screenshot-saas.com / admin123
+            <div className="mt-6 p-4 bg-orange-100/50 dark:bg-orange-800/20 backdrop-blur-sm rounded-lg border border-orange-200/50 dark:border-orange-700/30">
+              <p className="text-xs font-medium text-orange-800 dark:text-orange-200 mb-2">Demo Credentials:</p>
+              <p className="text-xs text-orange-700 dark:text-orange-300 font-mono">
+                <strong className="text-orange-800 dark:text-orange-200">Admin:</strong> admin@screenshot-saas.com / admin123
               </p>
             </div>
           </CardContent>
@@ -149,9 +167,10 @@ export default function LoginPage() {
         <div className="mt-8 text-center">
           <Link
             href="/"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-sm text-orange-600 dark:text-orange-400 hover:text-orange-800 dark:hover:text-orange-200 transition-colors inline-flex items-center space-x-1"
           >
-            ← Back to home
+            <span>←</span>
+            <span>Back to home</span>
           </Link>
         </div>
       </div>

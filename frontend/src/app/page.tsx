@@ -30,19 +30,28 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-secondary/20">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-orange-100 dark:from-orange-950 dark:via-amber-950 dark:to-orange-900 relative overflow-hidden">
+      {/* Animated background elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-orange-300/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-300/20 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style={{animationDelay: '3s'}}></div>
+        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-orange-400/15 rounded-full mix-blend-multiply filter blur-xl opacity-70 animate-pulse" style={{animationDelay: '6s'}}></div>
+      </div>
+      
       {/* Header */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="relative z-10 border-b border-orange-200/30 dark:border-orange-700/30 bg-white/80 dark:bg-orange-900/20 backdrop-blur-md sticky top-0">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <Camera className="h-8 w-8 text-primary" />
-            <span className="text-2xl font-bold">Screenshot SaaS</span>
+          <div className="flex items-center space-x-3">
+            <div className="p-2 bg-orange-500/20 backdrop-blur-sm rounded-xl border border-orange-300/30">
+              <Camera className="h-6 w-6 text-orange-600 dark:text-orange-400" />
+            </div>
+            <span className="text-2xl font-bold text-orange-900 dark:text-orange-100">Screenshot SaaS</span>
           </div>
           <div className="flex items-center space-x-4">
-            <Button variant="ghost" asChild>
+            <Button variant="ghost" className="text-orange-700 dark:text-orange-300 hover:text-orange-900 dark:hover:text-orange-100 hover:bg-orange-100/50 dark:hover:bg-orange-800/20" asChild>
               <Link href="/auth/login">Login</Link>
             </Button>
-            <Button asChild>
+            <Button className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-lg" asChild>
               <Link href="/auth/signup">Get Started</Link>
             </Button>
           </div>
@@ -50,21 +59,23 @@ export default function HomePage() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20 text-center">
-        <h1 className="text-5xl font-bold mb-6 bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Capture Screenshots at Scale
-        </h1>
-        <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-          Professional screenshot capture service with project management, crawling capabilities, 
-          and API access. Perfect for developers, designers, and businesses.
-        </p>
-        <div className="space-x-4">
-          <Button size="lg" asChild>
-            <Link href="/auth/signup">Get Started Free</Link>
-          </Button>
-          <Button size="lg" variant="outline" asChild>
-            <Link href="/auth/login">Sign In</Link>
-          </Button>
+      <section className="relative z-10 container mx-auto px-4 py-20 text-center">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-orange-600 via-amber-500 to-orange-600 bg-clip-text text-transparent">
+            Capture Screenshots at Scale
+          </h1>
+          <p className="text-xl text-orange-700 dark:text-orange-300 mb-8 max-w-3xl mx-auto leading-relaxed">
+            Professional screenshot capture service with project management, crawling capabilities, 
+            and API access. Perfect for developers, designers, and businesses.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <Button size="lg" className="bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-xl transform hover:scale-105 transition-all duration-200" asChild>
+              <Link href="/auth/signup">Get Started Free</Link>
+            </Button>
+            <Button size="lg" variant="outline" className="border-orange-300 dark:border-orange-700 text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-800/20 hover:border-orange-400 dark:hover:border-orange-600" asChild>
+              <Link href="/auth/login">Sign In</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
