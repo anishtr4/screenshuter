@@ -165,15 +165,15 @@ export default function UsersPage() {
 
     setConfirmModal({
       isOpen: true,
-      title: `${targetUser.active ? 'Deactivate' : 'Activate'} User`,
-      description: `Are you sure you want to ${targetUser.active ? 'deactivate' : 'activate'} ${targetUser.email}? ${targetUser.active ? 'They will lose access to the system.' : 'They will regain access to the system.'}`,
+      title: `${targetUser.active ? 'Deactivate' : 'Approve'} User`,
+      description: `Are you sure you want to ${targetUser.active ? 'deactivate' : 'approve'} ${targetUser.email}? ${targetUser.active ? 'They will lose access to the system.' : 'They will be able to sign in and access the system.'}`,
       type: targetUser.active ? 'warning' : 'info',
       icon: 'user',
       onConfirm: async () => {
         try {
           setConfirmModal(prev => ({ ...prev, loading: true }))
           await apiClient.updateUser(userId, { active: !targetUser.active })
-          toast.success(`User ${targetUser.active ? 'deactivated' : 'activated'} successfully`)
+          toast.success(`User ${targetUser.active ? 'deactivated' : 'approved'} successfully`)
           loadUsers()
           setConfirmModal(prev => ({ ...prev, isOpen: false, loading: false }))
         } catch (error) {
@@ -382,13 +382,13 @@ export default function UsersPage() {
                       </td>
                       <td className="px-4 py-3">
                         <Badge 
-                          variant={u.active ? 'default' : 'secondary'}
+                          variant={u.active ? 'default' : 'destructive'}
                           className="rounded-lg flex items-center gap-1 w-fit"
                         >
                           {u.active ? (
                             <><UserCheck className="h-3 w-3" /> Active</>
                           ) : (
-                            <><UserX className="h-3 w-3" /> Inactive</>
+                            <><AlertTriangle className="h-3 w-3" /> Pending Approval</>
                           )}
                         </Badge>
                       </td>
@@ -417,7 +417,7 @@ export default function UsersPage() {
                             size="sm"
                             onClick={() => toggleUserActive(u._id || u.id)}
                             className="rounded-xl border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 hover:border-orange-300 dark:hover:border-orange-600 transition-all duration-200"
-                            title={u.active ? 'Deactivate user' : 'Activate user'}
+                            title={u.active ? 'Deactivate user' : 'Approve user'}
                           >
                             {u.active ? <UserX className="h-4 w-4" /> : <UserCheck className="h-4 w-4" />}
                           </Button>

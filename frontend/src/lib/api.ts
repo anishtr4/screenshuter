@@ -37,10 +37,17 @@ class ApiClient {
       (response) => response,
       (error) => {
         if (error.response?.status === 401) {
-          // Clear auth state and redirect to login
-          store.dispatch(clearAuth())
-          if (typeof window !== 'undefined') {
-            window.location.href = '/auth/login'
+          // Don't redirect if we're already on auth pages or if it's a login/signup request
+          const isAuthRequest = error.config?.url?.includes('/auth/')
+          const isAuthPage = typeof window !== 'undefined' && 
+            (window.location.pathname.startsWith('/auth/') || window.location.pathname === '/')
+          
+          if (!isAuthRequest && !isAuthPage) {
+            // Clear auth state and redirect to login only for authenticated requests
+            store.dispatch(clearAuth())
+            if (typeof window !== 'undefined') {
+              window.location.href = '/auth/login'
+            }
           }
         }
         return Promise.reject(error)

@@ -46,10 +46,15 @@ export default function SignupPage() {
     try {
       const response = await apiClient.signup(data.email, data.password)
       
-      login(response.user, response.token, response.limits)
-      
-      toast.success('Account created successfully!')
-      router.push('/dashboard')
+      if (response.pendingApproval) {
+        toast.success('Account created successfully! Please wait for admin approval before signing in.')
+        router.push('/auth/login')
+      } else {
+        // Fallback for existing users or if approval is not required
+        login(response.user, response.token, response.limits)
+        toast.success('Account created successfully!')
+        router.push('/dashboard')
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || 'Signup failed')
     } finally {

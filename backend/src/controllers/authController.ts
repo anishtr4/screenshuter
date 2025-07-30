@@ -35,28 +35,21 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
     throw createError('User already exists with this email', 409);
   }
 
-  // Create new user
+  // Create new user (inactive by default, requires admin approval)
   const user = new User({
     email,
     password,
     role: 'user',
     tokenCreationEnabled: false,
-    active: true
+    active: false // New users are inactive until approved by admin
   });
 
   await user.save();
 
-  // Generate token
-  const token = generateToken(user);
-
-  // Get user limits
-  const limits = await getRemainingLimits(user._id.toString());
-
-  logger.info(`New user registered: ${email}`);
+  logger.info(`New user registered (pending approval): ${email}`);
 
   res.status(201).json({
-    message: 'User created successfully',
-    token,
+    message: 'Account created successfully! Please wait for admin approval before you can sign in.',
     user: {
       id: user._id,
       email: user.email,
@@ -65,7 +58,7 @@ export const signup = asyncHandler(async (req: Request, res: Response) => {
       active: user.active,
       createdAt: user.createdAt
     },
-    limits
+    pendingApproval: true
   });
 });
 
@@ -80,7 +73,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
 
   // Check if user is active
   if (!user.active) {
-    throw createError('Account is disabled. Please contact administrator.', 401);
+    throw createError('Your account is pending admin approval. Please wait for approval before signing in.', 401);
   }
 
   // Verify password

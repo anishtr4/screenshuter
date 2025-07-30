@@ -126,6 +126,50 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   });
 });
 
+export const approveUser = asyncHandler(async (req: Request, res: Response) => {
+  const { id } = req.params;
+
+  const user = await User.findById(id);
+  if (!user) {
+    throw createError('User not found', 404);
+  }
+
+  if (user.active) {
+    throw createError('User is already approved', 400);
+  }
+
+  user.active = true;
+  await user.save();
+
+  logger.info(`User approved by admin: ${user.email}`, { 
+    approvedBy: req.user?.id,
+    userId: user._id
+  });
+
+  res.json({
+    message: 'User approved successfully',
+    user: {
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      tokenCreationEnabled: user.tokenCreationEnabled,
+      active: user.active,
+      createdAt: user.createdAt
+    }
+  });
+});
+
+export const getPendingUsers = asyncHandler(async (req: Request, res: Response) => {
+  const pendingUsers = await User.find({ active: false })
+    .select('-password')
+    .sort({ createdAt: -1 });
+
+  res.json({
+    users: pendingUsers,
+    count: pendingUsers.length
+  });
+});
+
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
 
