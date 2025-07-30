@@ -10,7 +10,9 @@ import {
   AlertCircle,
   Search,
   Settings,
-  Clock
+  Clock,
+  ScrollText,
+  ArrowDown
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -19,7 +21,7 @@ import { apiClient } from '@/lib/api'
 export interface ScreenshotFormData {
   url: string
   projectId: string
-  mode: 'normal' | 'crawl'
+  mode: 'normal' | 'crawl' | 'frame'
   options: {
     fullPage: boolean
     width: number
@@ -30,6 +32,15 @@ export interface ScreenshotFormData {
     maxDepth: number
     maxPages: number
     includeExternal: boolean
+  }
+  frameOptions?: {
+    timeFrames: number[]
+    autoScroll: {
+      enabled: boolean
+      selector: string
+      stepSize: number
+      interval: number
+    }
   }
   // New crawl workflow properties
   selectedUrls?: string[]
@@ -65,6 +76,15 @@ export function AddScreenshotModal({
       maxDepth: 2,
       maxPages: 10,
       includeExternal: false
+    },
+    frameOptions: {
+      timeFrames: [0, 2, 5], // Default: capture at 0s, 2s, and 5s
+      autoScroll: {
+        enabled: false,
+        selector: 'window', // Default to window scroll
+        stepSize: 500, // Scroll 500px at a time
+        interval: 1000 // Wait 1 second between scrolls
+      }
     }
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -145,11 +165,31 @@ export function AddScreenshotModal({
       } finally {
         setLocalLoading(false)
       }
+    } else if (formData.mode === 'frame') {
+      // Frame screenshot with time intervals
+      try {
+        setLocalLoading(true)
+        const timeFrames = formData.frameOptions?.timeFrames || []
+        if (timeFrames.length === 0) {
+          toast.error('Please add at least one time frame')
+          return
+        }
+        
+        const data = await apiClient.createScreenshot(formData.url, formData.projectId, timeFrames, formData.frameOptions?.autoScroll)
+        toast.success(`Started capturing ${timeFrames.length} frame screenshots`)
+        
+        // Don't call onSubmit for frame screenshots as API call is already made
+        // onSubmit(formData) // This would trigger a second API call
+        onClose() // Close modal on success
+      } catch (error) {
+        console.error('Error capturing frame screenshots:', error)
+        toast.error('Failed to start frame screenshot capture')
+      } finally {
+        setLocalLoading(false)
+      }
     } else {
       // Normal single page screenshot
-
       onSubmit(formData)
-
     }
   }
   
@@ -332,7 +372,7 @@ export function AddScreenshotModal({
               <label className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-3 block">
                 Capture Mode
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-3 gap-3">
                 <button
                   type="button"
                   onClick={() => setFormData(prev => ({ ...prev, mode: 'normal' }))}
@@ -384,6 +424,33 @@ export function AddScreenshotModal({
                   </div>
                   <p className="text-sm text-orange-600 dark:text-orange-400">
                     Discover and capture multiple pages from a website
+                  </p>
+                </button>
+                
+                <button
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, mode: 'frame' }))}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                    formData.mode === 'frame'
+                      ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
+                      : "border-orange-200/50 dark:border-orange-700/50 hover:border-orange-300 dark:hover:border-orange-600"
+                  )}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <Clock className={cn(
+                      "h-5 w-5",
+                      formData.mode === 'frame' ? "text-orange-600" : "text-orange-400"
+                    )} />
+                    <span className={cn(
+                      "font-medium",
+                      formData.mode === 'frame' ? "text-orange-900 dark:text-orange-100" : "text-orange-700 dark:text-orange-300"
+                    )}>
+                      Time Frames
+                    </span>
+                  </div>
+                  <p className="text-sm text-orange-600 dark:text-orange-400">
+                    Capture screenshots at specific time intervals
                   </p>
                 </button>
               </div>
@@ -468,6 +535,258 @@ export function AddScreenshotModal({
               </div>
             )}
 
+            {/* Frame Options */}
+            {formData.mode === 'frame' && (
+              <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-xl p-4 border border-orange-200/30 dark:border-orange-700/30">
+                <div className="flex items-center gap-2 mb-4">
+                  <Clock className="h-4 w-4 text-orange-600" />
+                  <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                    Time Frame Settings
+                  </span>
+                </div>
+                
+                <div className="space-y-3">
+                  <label className="text-sm text-orange-700 dark:text-orange-300 block">
+                    Capture Times (seconds)
+                  </label>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mb-3">
+                    Enter time intervals when screenshots should be taken (0-300 seconds)
+                  </p>
+                  
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {formData.frameOptions?.timeFrames.map((time, index) => (
+                      <div key={index} className="flex items-center gap-1 bg-orange-100 dark:bg-orange-900/30 rounded-lg px-3 py-1">
+                        <span className="text-sm text-orange-800 dark:text-orange-200">{time}s</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTimeFrames = formData.frameOptions?.timeFrames.filter((_, i) => i !== index) || []
+                            setFormData(prev => ({
+                              ...prev,
+                              frameOptions: { ...prev.frameOptions!, timeFrames: newTimeFrames }
+                            }))
+                          }}
+                          className="text-orange-600 hover:text-orange-800 ml-1"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      min="0"
+                      max="300"
+                      placeholder="Add time (seconds)"
+                      onKeyPress={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault()
+                          const input = e.target as HTMLInputElement
+                          const time = parseInt(input.value)
+                          if (time >= 0 && time <= 300 && !formData.frameOptions?.timeFrames.includes(time)) {
+                            setFormData(prev => ({
+                              ...prev,
+                              frameOptions: {
+                                ...prev.frameOptions!,
+                                timeFrames: [...(prev.frameOptions?.timeFrames || []), time].sort((a, b) => a - b)
+                              }
+                            }))
+                            input.value = ''
+                          }
+                        }
+                      }}
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={(e) => {
+                        const input = (e.target as HTMLElement).previousElementSibling as HTMLInputElement
+                        const time = parseInt(input.value)
+                        if (time >= 0 && time <= 300 && !formData.frameOptions?.timeFrames.includes(time)) {
+                          setFormData(prev => ({
+                            ...prev,
+                            frameOptions: {
+                              ...prev.frameOptions!,
+                              timeFrames: [...(prev.frameOptions?.timeFrames || []), time].sort((a, b) => a - b)
+                            }
+                          }))
+                          input.value = ''
+                        }
+                      }}
+                      className="px-3 border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Add
+                    </Button>
+                  </div>
+                  
+                  <div className="flex gap-2 mt-3">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        frameOptions: { ...prev.frameOptions!, timeFrames: [0, 2, 5] }
+                      }))}
+                      className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Quick: 0s, 2s, 5s
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        frameOptions: { ...prev.frameOptions!, timeFrames: [0, 1, 3, 5, 10] }
+                      }))}
+                      className="text-xs border-orange-300 text-orange-600 hover:bg-orange-50"
+                    >
+                      Animation: 0s, 1s, 3s, 5s, 10s
+                    </Button>
+                  </div>
+                  
+                  {/* Auto-Scroll Configuration */}
+                  <div className="mt-6 pt-4 border-t border-orange-200/50 dark:border-orange-700/50">
+                    <div className="flex items-center gap-2 mb-4">
+                      <ScrollText className="h-4 w-4 text-orange-600" />
+                      <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                        Auto-Scroll Settings
+                      </span>
+                    </div>
+                    
+                    <div className="space-y-4">
+                      {/* Enable Auto-Scroll Toggle */}
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          id="autoScrollEnabled"
+                          checked={formData.frameOptions?.autoScroll.enabled || false}
+                          onChange={(e) => setFormData(prev => ({
+                            ...prev,
+                            frameOptions: {
+                              ...prev.frameOptions!,
+                              autoScroll: {
+                                ...prev.frameOptions!.autoScroll,
+                                enabled: e.target.checked
+                              }
+                            }
+                          }))}
+                          className="rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+                        />
+                        <label htmlFor="autoScrollEnabled" className="text-sm text-orange-700 dark:text-orange-300">
+                          Enable auto-scroll after capturing time frames
+                        </label>
+                      </div>
+                      
+                      {/* Auto-Scroll Options (only show when enabled) */}
+                      {formData.frameOptions?.autoScroll.enabled && (
+                        <div className="grid grid-cols-1 gap-4 pl-6 border-l-2 border-orange-200 dark:border-orange-700">
+                          <div>
+                            <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                              Scroll Selector
+                            </label>
+                            <Input
+                              type="text"
+                              value={formData.frameOptions?.autoScroll.selector || 'window'}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                frameOptions: {
+                                  ...prev.frameOptions!,
+                                  autoScroll: {
+                                    ...prev.frameOptions!.autoScroll,
+                                    selector: e.target.value
+                                  }
+                                }
+                              }))}
+                              placeholder="window, body, .container, #content"
+                              className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                            />
+                            <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                              CSS selector for scrollable element (default: 'window')
+                            </p>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                                Step Size (px)
+                              </label>
+                              <Input
+                                type="number"
+                                min="100"
+                                max="2000"
+                                step="50"
+                                value={formData.frameOptions?.autoScroll.stepSize || 500}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  frameOptions: {
+                                    ...prev.frameOptions!,
+                                    autoScroll: {
+                                      ...prev.frameOptions!.autoScroll,
+                                      stepSize: parseInt(e.target.value) || 500
+                                    }
+                                  }
+                                }))}
+                                className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                              />
+                              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                Pixels to scroll per step
+                              </p>
+                            </div>
+                            
+                            <div>
+                              <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                                Interval (ms)
+                              </label>
+                              <Input
+                                type="number"
+                                min="500"
+                                max="5000"
+                                step="100"
+                                value={formData.frameOptions?.autoScroll.interval || 1000}
+                                onChange={(e) => setFormData(prev => ({
+                                  ...prev,
+                                  frameOptions: {
+                                    ...prev.frameOptions!,
+                                    autoScroll: {
+                                      ...prev.frameOptions!.autoScroll,
+                                      interval: parseInt(e.target.value) || 1000
+                                    }
+                                  }
+                                }))}
+                                className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                              />
+                              <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                                Wait time between scrolls
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-orange-50/50 dark:bg-orange-900/20 rounded-lg p-3">
+                            <div className="flex items-start gap-2">
+                              <ArrowDown className="h-4 w-4 text-orange-500 mt-0.5 flex-shrink-0" />
+                              <div className="text-xs text-orange-700 dark:text-orange-300">
+                                <p className="font-medium mb-1">How auto-scroll works:</p>
+                                <p>1. Captures time-based frames first ({formData.frameOptions?.timeFrames.length || 0} frames)</p>
+                                <p>2. Starts scrolling by {formData.frameOptions?.autoScroll.stepSize || 500}px every {formData.frameOptions?.autoScroll.interval || 1000}ms</p>
+                                <p>3. Takes a screenshot at each scroll position</p>
+                                <p>4. Continues until reaching the end of the page</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Settings */}
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
@@ -543,7 +862,8 @@ export function AddScreenshotModal({
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                     {localLoading ? 'Discovering URLs...' : 
-                     formData.mode === 'crawl' ? 'Crawling...' : 'Capturing...'}
+                     formData.mode === 'crawl' ? 'Crawling...' : 
+                     formData.mode === 'frame' ? 'Capturing Frames...' : 'Capturing...'}
                   </>
                 ) : (
                   <>
@@ -551,6 +871,11 @@ export function AddScreenshotModal({
                       <>
                         <Search className="h-4 w-4 mr-2" />
                         Start Crawl
+                      </>
+                    ) : formData.mode === 'frame' ? (
+                      <>
+                        <Clock className="h-4 w-4 mr-2" />
+                        Capture Frames
                       </>
                     ) : (
                       <>

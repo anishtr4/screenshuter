@@ -4,6 +4,13 @@ export interface ICollection extends Document {
   projectId: mongoose.Types.ObjectId;
   baseUrl: string;
   name: string;
+  type: 'crawl' | 'frame';
+  metadata?: {
+    frameCount?: number;
+    timeFrames?: number[];
+    crawlDepth?: number;
+    totalUrls?: number;
+  };
   createdAt: Date;
 }
 
@@ -24,6 +31,17 @@ const collectionSchema = new Schema<ICollection>({
     required: true,
     trim: true,
     maxlength: 200
+  },
+  type: {
+    type: String,
+    enum: ['crawl', 'frame'],
+    required: true
+  },
+  metadata: {
+    frameCount: Number,
+    timeFrames: [Number],
+    crawlDepth: Number,
+    totalUrls: Number
   },
   createdAt: {
     type: Date,

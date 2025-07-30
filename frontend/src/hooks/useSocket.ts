@@ -56,16 +56,21 @@ export const useSocket = () => {
 
     // Listen for screenshot progress updates
     socket.on('screenshot-progress', (data: ScreenshotProgress) => {
-
-      setScreenshotProgress(prev => ({
-        ...prev,
-        [data.screenshotId]: data
-      }))
+      // IGNORE individual screenshot progress to prevent collection screenshots from appearing
+      // Only log for debugging
+      console.log('Screenshot progress received (IGNORED):', data.screenshotId, data.status);
+      
+      // Do NOT update screenshotProgress state to prevent any UI updates
+      // setScreenshotProgress(prev => ({
+      //   ...prev,
+      //   [data.screenshotId]: data
+      // }))
     })
 
     // Listen for collection progress updates
     socket.on('collection-progress', (data: CollectionProgress) => {
-
+      console.log('Collection progress received:', data.collectionId, data.progress + '%', data.stage);
+      
       setCollectionProgress(prev => ({
         ...prev,
         [data.collectionId]: data

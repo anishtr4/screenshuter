@@ -168,29 +168,11 @@ export default function ProjectDetailsPage() {
           })
           
           if (!foundMatch) {
-
-            
-            // If no match found and this is a completed screenshot, add it as a new screenshot
-            if (progress.status === 'completed' && progress.metadata) {
-
-              const newScreenshot: Screenshot = {
-                _id: progress.screenshotId,
-                id: progress.screenshotId,
-                status: progress.status,
-                imagePath: progress.imagePath || null,
-                thumbnailPath: progress.thumbnailPath || null,
-                metadata: progress.metadata,
-                url: '', // We don't have the URL from socket data
-                createdAt: new Date().toISOString(),
-
-                type: 'normal', // Fix type to match Screenshot type
-                projectId: project?.id || '', // Fix project ID field
-
-              }
-              const updatedWithNew = [newScreenshot, ...updated]
-
-              return [...updatedWithNew]
-            }
+            // Don't add individual screenshots from socket updates at all
+            // Collections will be refreshed via collection progress events
+            // Individual screenshots should only be added via API refresh
+            console.log('Screenshot not found in current list, but not adding via socket to avoid collection conflicts:', progress.screenshotId);
+            return updated; // Return without adding
           }
           
 
@@ -214,7 +196,33 @@ export default function ProjectDetailsPage() {
         clearScreenshotProgress(progress.screenshotId)
       }
     })
-  }, [screenshotProgress, params.id, clearScreenshotProgress])
+  }, [screenshotProgress, collectionProgress, params.id, clearScreenshotProgress])
+
+  // Listen for collection progress updates to refresh data when collections are created or completed
+  useEffect(() => {
+    const activeCollections = Object.values(collectionProgress);
+    if (activeCollections.length === 0) return;
+    
+    // Only refresh on collection start (0%) or completion (100%)
+    // Ignore intermediate progress updates (33%, 67%, etc.)
+    const newCollections = activeCollections.filter(progress => progress.progress === 0);
+    const completedCollections = activeCollections.filter(progress => progress.progress === 100);
+    
+    if (newCollections.length > 0) {
+      console.log('New collection detected - refreshing project data:', newCollections.length);
+      if (params.id) {
+        loadProjectData(params.id as string);
+      }
+    } else if (completedCollections.length > 0) {
+      console.log('Collection completed - refreshing project data:', completedCollections.length);
+      // Add delay for completion to ensure all data is ready
+      setTimeout(() => {
+        if (params.id) {
+          loadProjectData(params.id as string);
+        }
+      }, 1000);
+    }
+  }, [collectionProgress, params.id]);
 
   const loadProjectData = async (projectId: string) => {
     try {
@@ -560,8 +568,8 @@ export default function ProjectDetailsPage() {
 
         
         try {
-          // Create normal screenshot
-          const apiResponse = await apiClient.createScreenshot(data.url, data.projectId)
+          // Create normal screenshot (with timeFrames if provided)
+          const apiResponse = await apiClient.createScreenshot(data.url, data.projectId, data.timeFrames, data.frameOptions?.autoScroll)
 
           
           // Extract the actual screenshot object from the response
@@ -663,33 +671,7 @@ export default function ProjectDetailsPage() {
             <Camera className="h-4 w-4 mr-2" />
             Add Screenshot
           </Button>
-          
-          {/* TEST BUTTON - Remove after debugging */}
-          <Button 
-            onClick={() => {
 
-              const testScreenshot = {
-                _id: 'test-' + Date.now(),
-                id: 'test-' + Date.now(),
-                status: 'processing' as const,
-                url: 'https://example.com',
-                createdAt: new Date().toISOString(),
-                metadata: { title: 'Loading...', description: '' },
-                type: 'normal' as const,
-                projectId: project?.id || '',
-                imagePath: null,
-                thumbnailPath: null
-              }
-              setScreenshots(prev => {
-
-                return [testScreenshot, ...prev]
-              })
-            }}
-            variant="outline"
-            className="border-red-500 text-red-600 hover:bg-red-50"
-          >
-            🧪 TEST ADD
-          </Button>
         </div>
       </div>
 
@@ -707,7 +689,7 @@ export default function ProjectDetailsPage() {
           // Check if this item has progress
           const itemId = item._id || item.id || ''
           const itemProgress = item.isCollectionFolder 
-            ? collectionProgress[itemId] 
+            ? (collectionProgress[itemId]?.progress === 100 ? null : collectionProgress[itemId]) 
             : screenshotProgress[itemId]
           
           // Also check if this is a processing screenshot (for optimistic UI)
@@ -726,10 +708,25 @@ export default function ProjectDetailsPage() {
                       // Show progress for collections being processed
                       <div className="text-center p-4">
                         <div className="flex items-center justify-center mb-2">
-                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                          {itemProgress.isScrolling ? (
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-bounce h-2 w-2 bg-orange-500 rounded-full"></div>
+                              <div className="animate-bounce h-2 w-2 bg-orange-500 rounded-full" style={{animationDelay: '0.1s'}}></div>
+                              <div className="animate-bounce h-2 w-2 bg-orange-500 rounded-full" style={{animationDelay: '0.2s'}}></div>
+                            </div>
+                          ) : (
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                          )}
                         </div>
                         <div className="text-sm font-medium text-orange-700 dark:text-orange-300 mb-2">
-                          {itemProgress.stage || 'Processing...'}
+                          {itemProgress.isScrolling ? (
+                            <span className="flex items-center justify-center">
+                              <span className="mr-2">🔄</span>
+                              Scroll in progress...
+                            </span>
+                          ) : (
+                            itemProgress.stage || 'Processing...'
+                          )}
                         </div>
                         <div className="w-full bg-orange-200 dark:bg-orange-800 rounded-full h-2 mb-1">
                           <div 
