@@ -10,7 +10,7 @@ module.exports = {
       max_memory_restart: '1G',
       env: {
         NODE_ENV: 'production',
-        PORT: 3000,
+        PORT: 8002,
         // Database
         MONGODB_URI: 'mongodb://localhost:27017/screenshot_saas',
         
@@ -40,8 +40,13 @@ module.exports = {
       },
       env_development: {
         NODE_ENV: 'development',
-        PORT: 3000,
+        PORT: 8002,
         LOG_LEVEL: 'debug'
+      },
+      env_staging: {
+        NODE_ENV: 'staging',
+        PORT: 8002,
+        LOG_LEVEL: 'info'
       },
       error_file: './logs/pm2-error.log',
       out_file: './logs/pm2-out.log',

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { DashboardLayout } from '../layout/DashboardLayout'
-import { Button } from '../ui/Button'
+import { Button } from '@/components/ui/button'
 import { AddScreenshotModal } from '../modals/AddScreenshotModal'
 import { FullImageModal } from '../modals/FullImageModal'
 import { CollectionFramesModal } from '../modals/CollectionFramesModal'
@@ -184,7 +184,7 @@ const ProjectDetailPage: React.FC = () => {
   // Load image URLs for thumbnails using blob URLs with proper auth
   const loadImageUrls = async (screenshotsToLoad: Screenshot[]) => {
     const newUrls: Record<string, string> = {}
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
     
     for (const screenshot of screenshotsToLoad) {
       const screenshotId = screenshot.id || screenshot._id
@@ -342,7 +342,7 @@ const ProjectDetailPage: React.FC = () => {
       
       // Load thumbnails for all screenshots in the collection
       const newUrls: Record<string, string> = {}
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       const token = localStorage.getItem('token')
       
       for (const screenshot of collectionScreenshots) {

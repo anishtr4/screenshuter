@@ -47,7 +47,7 @@ const io = new Server(server, {
   }
 });
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8002;
 
 // Rate limiting
 const limiter = rateLimit({
@@ -129,14 +129,14 @@ app.use((req, res, next) => {
 });
 
 // Routes
-app.use('/api/v1/auth', authRoutes);
-app.use('/api/v1/users', userRoutes);
-app.use('/api/v1/projects', projectRoutes);
-app.use('/api/v1/screenshots', screenshotRoutes);
-app.use('/api/v1/collections', collectionRoutes);
-app.use('/api/v1/tokens', tokenRoutes);
-app.use('/api/v1/configs', configRoutes);
-app.use('/api/v1/images', imageRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/projects', projectRoutes);
+app.use('/api/screenshots', screenshotRoutes);
+app.use('/api/collections', collectionRoutes);
+app.use('/api/tokens', tokenRoutes);
+app.use('/api/configs', configRoutes);
+app.use('/api/images', imageRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
