@@ -1,6 +1,8 @@
 export interface User {
   id: string
   _id?: string
+  firstName: string
+  lastName: string
   email: string
   role: 'super_admin' | 'user'
   tokenCreationEnabled: boolean
@@ -48,126 +50,65 @@ export interface Screenshot {
   title?: string
   imagePath: string | null
   thumbnailPath?: string | null
-  type: 'normal' | 'crawl' | 'collection'
-  collectionId?: string
-  status?: 'pending' | 'processing' | 'completed' | 'failed'
-  errorMessage?: string
+  status: 'pending' | 'processing' | 'completed' | 'failed'
   metadata?: {
-    title?: string
     width?: number
     height?: number
     fileSize?: number
+    format?: string
     capturedAt?: string
-    screenshotCount?: number
+    device?: string
+    viewport?: {
+      width: number
+      height: number
+    }
   }
   createdAt: string
-  // Collection flags from unified API
-  isIndividual?: boolean
-  isCollection?: boolean
-  isCollectionFolder?: boolean
-  collectionInfo?: {
-    id: string
-    name: string
-    baseUrl: string
-    screenshotCount?: number
-  } | null
-  frames?: Screenshot[] // For collection folders, contains all screenshots in the collection
+  updatedAt?: string
 }
 
 export interface Collection {
   id: string
-  projectId: string
-  baseUrl: string
   name: string
-  status?: 'pending' | 'processing' | 'completed' | 'failed'
+  description?: string
+  projectId: string
+  screenshotIds: string[]
   createdAt: string
-  screenshotCount: number
+  updatedAt?: string
 }
 
 export interface ApiToken {
   id: string
   name: string
-  token?: string // Only available during creation
-  active: boolean
+  token?: string
+  permissions: string[]
   lastUsed?: string
   createdAt: string
+  expiresAt?: string
 }
 
 export interface Config {
   id: string
   key: string
-  value: number | string | boolean
+  value: any
   description?: string
+  type: 'string' | 'number' | 'boolean' | 'object'
   updatedAt: string
 }
 
-export interface UserStats {
-  totalUsers: number
-  activeUsers: number
-  inactiveUsers: number
-  adminUsers: number
-  regularUsers: number
-  usersWithTokensEnabled: number
+export interface PaginatedResponse<T> {
+  data: T[]
+  pagination: {
+    page: number
+    limit: number
+    total: number
+    pages: number
+  }
 }
 
-export interface PaginationInfo {
-  page: number
-  limit: number
-  total: number
-  pages: number
-}
-
-export interface ApiResponse<T> {
+export interface ApiResponse<T = any> {
+  success: boolean
   data?: T
   message?: string
   error?: string
 }
-
-export interface ProjectsResponse {
-  projects: Project[]
-  pagination: PaginationInfo
-}
-
-export interface ProjectDetailsResponse {
-  project: Project
-  screenshots: Screenshot[]
-}
-
-export interface CollectionScreenshotsResponse {
-  collection: Collection
-  screenshots: Screenshot[]
-  pagination: PaginationInfo
-}
-
-export interface UsersResponse {
-  users: User[]
-  pagination: PaginationInfo
-}
-
-export interface TokensResponse {
-  tokens: ApiToken[]
-}
-
-export interface ConfigsResponse {
-  configs: Config[]
-}
-
-export interface CrawlResponse {
-  collection: Collection
-  urls: string[]
-  urlCount: number
-}
-
-export interface SocketEvents {
-  'screenshot-status': {
-    screenshotId: string
-    status: Screenshot['status']
-    imagePath?: string
-    thumbnailPath?: string
-    metadata?: Screenshot['metadata']
-    error?: string
-  }
-}
-
-export type ScreenshotStatus = Screenshot['status']
-export type UserRole = User['role']

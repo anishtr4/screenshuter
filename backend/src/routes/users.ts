@@ -4,7 +4,9 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  getUserStats
+  getUserStats,
+  approveUser,
+  getPendingUsers
 } from '../controllers/userController';
 import { validateUserCreation, validateUserUpdate } from '../middleware/validation';
 import { authenticateJWT, requireAdmin } from '../middleware/auth';
@@ -49,5 +51,19 @@ router.patch('/:id', validateUserUpdate, updateUser);
  * @access  Admin only
  */
 router.delete('/:id', deleteUser);
+
+/**
+ * @route   GET /api/v1/users/pending
+ * @desc    Get pending users
+ * @access  Admin only
+ */
+router.get('/pending', getPendingUsers);
+
+/**
+ * @route   PATCH /api/v1/users/:id/approve
+ * @desc    Approve a user
+ * @access  Admin only
+ */
+router.patch('/:id/approve', approveUser);
 
 export default router;

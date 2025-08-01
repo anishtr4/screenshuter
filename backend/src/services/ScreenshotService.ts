@@ -13,6 +13,8 @@ export interface ScreenshotJobData {
   projectId: string;
   userId: string;
   type: 'normal' | 'crawl';
+  collectionId?: string;
+  collectionName?: string;
 }
 
 export interface CrawlJobData {
@@ -100,7 +102,14 @@ export class ScreenshotService {
   }
 
   async captureScreenshot(data: ScreenshotJobData): Promise<void> {
-    const { screenshotId, url, userId, type } = data;
+    const { screenshotId, url, userId, type, collectionId, collectionName } = data;
+    
+    // Create metadata for collection screenshots
+    const metadata = collectionId ? {
+      isCollection: true,
+      collectionId,
+      collectionName
+    } : undefined;
     
     try {
       // Update status to processing
@@ -113,7 +122,8 @@ export class ScreenshotService {
         screenshotId,
         status: 'processing',
         progress: 0,
-        stage: 'Initializing browser...'
+        stage: 'Initializing browser...',
+        metadata
       });
 
       // Emit progress: browser ready
@@ -121,7 +131,8 @@ export class ScreenshotService {
         screenshotId,
         status: 'processing',
         progress: 10,
-        stage: 'Browser ready, creating page...'
+        stage: 'Browser ready, creating page...',
+        metadata
       });
 
       const browser = await this.getBrowser();
@@ -132,7 +143,8 @@ export class ScreenshotService {
         screenshotId,
         status: 'processing',
         progress: 20,
-        stage: 'Configuring page settings...'
+        stage: 'Configuring page settings...',
+        metadata
       });
 
       // Set viewport and user agent
@@ -146,7 +158,8 @@ export class ScreenshotService {
         screenshotId,
         status: 'processing',
         progress: 30,
-        stage: `Navigating to ${url}...`
+        stage: `Navigating to ${url}...`,
+        metadata
       });
 
       // Navigate to URL with increased timeout for heavy websites
@@ -184,7 +197,8 @@ export class ScreenshotService {
         screenshotId,
         status: 'processing',
         progress: 60,
-        stage: 'Page loaded, waiting for content...'
+        stage: 'Page loaded, waiting for content...',
+        metadata
       });
 
       // Wait a bit for dynamic content
@@ -208,7 +222,8 @@ export class ScreenshotService {
         screenshotId,
         status: 'processing',
         progress: 70,
-        stage: 'Capturing screenshot...'
+        stage: 'Capturing screenshot...',
+        metadata
       });
 
       // Take screenshot
@@ -268,7 +283,8 @@ export class ScreenshotService {
           title,
           width: imageInfo.width,
           height: imageInfo.height,
-          fileSize: stats.size
+          fileSize: stats.size,
+          ...(metadata || {})
         }
       });
 
@@ -289,7 +305,8 @@ export class ScreenshotService {
         status: 'failed',
         progress: 0,
         stage: 'Screenshot failed',
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
+        metadata
       });
 
       throw error;
@@ -831,6 +848,10 @@ export class ScreenshotService {
 
     try {
       logger.info(`Starting crawl screenshot capture for ${urls.length} URLs`, { collectionId });
+      
+      // Get collection name for metadata
+      const collection = await Collection.findById(collectionId);
+      const collectionName = collection?.name || 'Untitled Collection';
 
       // Create screenshot records for all URLs
       const screenshotPromises = urls.map(async (url) => {
@@ -865,7 +886,9 @@ export class ScreenshotService {
             url: screenshot.url,
             projectId,
             userId,
-            type: 'crawl'
+            type: 'crawl',
+            collectionId,
+            collectionName
           });
           
           completedCount++;

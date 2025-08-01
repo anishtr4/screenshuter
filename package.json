@@ -6,9 +6,10 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "cd backend && npm run dev",
-    "dev:frontend": "cd frontend && npm run dev -- -p 5001",
+    "dev:frontend": "cd frontend && npm run dev",
     "stop": "pkill -f \"npm run dev\" || true",
     "build": "npm run build:backend && npm run build:frontend",
+    "build:all": "npm run install:all && npm run build:frontend && npm run build:backend",
     "build:backend": "cd backend && npm run build",
     "build:frontend": "cd frontend && npm run build",
     "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",

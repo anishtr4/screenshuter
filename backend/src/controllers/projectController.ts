@@ -56,12 +56,15 @@ export const getProjects = asyncHandler(async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
 
-  const projects = await Project.find({ userId })
+  // Super admins can see all projects, regular users only see their own
+  const query = req.user.role === 'super_admin' ? {} : { userId };
+
+  const projects = await Project.find(query)
     .sort({ createdAt: -1 })
     .skip(skip)
     .limit(limit);
 
-  const total = await Project.countDocuments({ userId });
+  const total = await Project.countDocuments(query);
 
   // Get screenshot counts for each project
   const projectsWithCounts = await Promise.all(
@@ -107,7 +110,9 @@ export const getProject = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
   const userId = req.user.id;
 
-  const project = await Project.findOne({ _id: id, userId });
+  // Super admins can access any project, regular users only their own
+  const query = req.user.role === 'super_admin' ? { _id: id } : { _id: id, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }

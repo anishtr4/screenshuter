@@ -97,6 +97,16 @@ export const validateCrawlSelection = [
 
 // User management validation rules
 export const validateUserUpdate = [
+  body('firstName')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('First name must be between 1 and 50 characters'),
+  body('lastName')
+    .optional()
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Last name must be between 1 and 50 characters'),
   body('tokenCreationEnabled')
     .optional()
     .isBoolean()
@@ -109,6 +119,14 @@ export const validateUserUpdate = [
 ];
 
 export const validateUserCreation = [
+  body('firstName')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('First name is required and must be between 1 and 50 characters'),
+  body('lastName')
+    .trim()
+    .isLength({ min: 1, max: 50 })
+    .withMessage('Last name is required and must be between 1 and 50 characters'),
   body('email')
     .isEmail()
     .normalizeEmail()

@@ -28,7 +28,7 @@ export const getUsers = asyncHandler(async (req: Request, res: Response) => {
 });
 
 export const createUser = asyncHandler(async (req: Request, res: Response) => {
-  const { email, password, role = 'user' } = req.body;
+  const { firstName, lastName, email, password, role = 'user' } = req.body;
 
   // Check if user already exists
   const existingUser = await User.findOne({ email });
@@ -37,6 +37,8 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
   }
 
   const user = new User({
+    firstName,
+    lastName,
     email,
     password,
     role,
@@ -55,6 +57,8 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
     message: 'User created successfully',
     user: {
       id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       role: user.role,
       tokenCreationEnabled: user.tokenCreationEnabled,
@@ -66,7 +70,7 @@ export const createUser = asyncHandler(async (req: Request, res: Response) => {
 
 export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const { email, role, tokenCreationEnabled, active } = req.body;
+  const { firstName, lastName, email, role, tokenCreationEnabled, active } = req.body;
 
   const user = await User.findById(id);
   if (!user) {
@@ -93,6 +97,14 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   }
 
   // Update fields if provided
+  if (firstName) {
+    user.firstName = firstName;
+  }
+  
+  if (lastName) {
+    user.lastName = lastName;
+  }
+  
   if (role && ['user', 'super_admin'].includes(role)) {
     user.role = role;
   }
@@ -110,13 +122,15 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
   logger.info(`User updated by admin: ${user.email}`, { 
     updatedBy: req.user?.id,
     userId: user._id,
-    changes: { email, role, tokenCreationEnabled, active }
+    changes: { firstName, lastName, email, role, tokenCreationEnabled, active }
   });
 
   res.json({
     message: 'User updated successfully',
     user: {
       id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
       email: user.email,
       role: user.role,
       tokenCreationEnabled: user.tokenCreationEnabled,
