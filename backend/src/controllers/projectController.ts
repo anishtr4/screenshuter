@@ -230,14 +230,18 @@ export const updateProject = asyncHandler(async (req: Request, res: Response) =>
   const { name, description } = req.body;
   const userId = req.user.id;
 
-  const project = await Project.findOne({ _id: id, userId });
+  // Super admins can edit any project, regular users only their own
+  const query = req.user.role === 'super_admin' ? { _id: id } : { _id: id, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }
 
   // Check if new name conflicts with existing projects
   if (name !== project.name) {
-    const existingProject = await Project.findOne({ userId, name });
+    // For super admins, check against the project owner's projects, not the admin's
+    const projectOwnerId = req.user.role === 'super_admin' ? project.userId : userId;
+    const existingProject = await Project.findOne({ userId: projectOwnerId, name });
     if (existingProject) {
       throw createError('Project with this name already exists', 409);
     }
@@ -272,7 +276,9 @@ export const deleteProject = asyncHandler(async (req: Request, res: Response) =>
   const { id } = req.params;
   const userId = req.user.id;
 
-  const project = await Project.findOne({ _id: id, userId });
+  // Super admins can delete any project, regular users only their own
+  const query = req.user.role === 'super_admin' ? { _id: id } : { _id: id, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }

@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Button } from '@/components/ui/button'
-import { Plus, FolderOpen, Camera, Clock, MoreVertical, Eye, Edit, Trash2, Key, Users } from 'lucide-react'
+import { Plus, FolderOpen, Camera, Clock, Eye, Edit, Trash2, Users } from 'lucide-react'
 import { apiClient } from '@/lib/api'
 import { toast } from 'sonner'
 import { AddProjectModal } from '@/components/modals/AddProjectModal'
 import { EditProjectModal } from '@/components/modals/EditProjectModal'
 import { DeleteConfirmModal } from '@/components/modals/DeleteConfirmModal'
-import { ApiKeyModal } from '@/components/modals/ApiKeyModal'
+
 
 interface Project {
   id: string
@@ -26,11 +26,11 @@ interface Project {
 
 const getProjectColor = (index: number) => {
   const colors = [
-    'from-blue-500 to-cyan-500',
-    'from-purple-500 to-pink-500',
-    'from-green-500 to-emerald-500',
-    'from-orange-500 to-red-500',
+    'from-blue-500 to-indigo-500',
     'from-indigo-500 to-purple-500',
+    'from-purple-500 to-pink-500',
+    'from-pink-500 to-rose-500',
+    'from-cyan-500 to-blue-500',
     'from-teal-500 to-cyan-500'
   ]
   return colors[index % colors.length]
@@ -57,7 +57,7 @@ const ProjectsPage = () => {
   const [isCreating, setIsCreating] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showApiKeyModal, setShowApiKeyModal] = useState(false)
+
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isUpdating, setIsUpdating] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -136,49 +136,30 @@ const ProjectsPage = () => {
     }
   }
 
-  const handleCreateApiKey = async (name: string) => {
-    const response = await apiClient.createToken(name)
-    return response.token
-  }
-
-
-
   useEffect(() => {
     loadProjects()
   }, [])
 
-
-
   return (
     <DashboardLayout title="Projects" subtitle="Manage your screenshot projects and collections">
       <div className="space-y-8">
-        {/* Header Actions */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              {projects.length} projects total
-            </div>
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+              Projects
+            </h1>
+            <p className="text-slate-600 dark:text-slate-400 mt-2">
+              Manage your screenshot projects
+            </p>
           </div>
-          <div className="flex items-center space-x-3">
-            <Button 
-              onClick={() => {
-                console.log('API Keys button clicked')
-                setShowApiKeyModal(true)
-              }}
-              variant="outline"
-              className="border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
-            >
-              <Key className="h-4 w-4 mr-2" />
-              API Keys
-            </Button>
-            <Button 
-              onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              New Project
-            </Button>
-          </div>
+          <Button 
+            onClick={() => setShowAddModal(true)}
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Project
+          </Button>
         </div>
 
         {/* Projects Grid */}
@@ -186,7 +167,7 @@ const ProjectsPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="rounded-2xl bg-gray-200 dark:bg-gray-700 h-64"></div>
+                <div className="rounded-2xl bg-slate-200 dark:bg-slate-700 h-64"></div>
               </div>
             ))}
           </div>
@@ -195,11 +176,11 @@ const ProjectsPage = () => {
             {projects.map((project, index) => (
               <div
                 key={project.id}
-                className="group relative overflow-hidden rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl shadow-xl border border-white/20 dark:border-white/10 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
+                className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
               >
                 {/* Background Pattern */}
-                <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-full blur-xl"></div>
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
+                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
                 
                 <div className="relative p-6">
                   {/* Header */}
@@ -211,30 +192,27 @@ const ProjectsPage = () => {
                       <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
                         active
                       </span>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
                     </div>
                   </div>
 
                   {/* Content */}
                   <div className="space-y-3">
-                    <h3 className="font-semibold text-lg text-gray-900 dark:text-white line-clamp-1">
+                    <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100 line-clamp-1">
                       {project.name}
                     </h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
                       {project.description || 'No description provided'}
                     </p>
                     
                     {/* Stats */}
                     <div className="space-y-2 pt-2">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-                          <Camera className="h-4 w-4" />
+                        <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
+                          <Camera className="h-4 w-4 text-blue-500" />
                           <span>{project.screenshotCount || 0} screenshots</span>
                         </div>
-                        <div className="flex items-center space-x-1 text-xs text-gray-500 dark:text-gray-500">
-                          <Clock className="h-3 w-3" />
+                        <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-500">
+                          <Clock className="h-3 w-3 text-blue-500" />
                           <span>{formatDate(project.updatedAt)}</span>
                         </div>
                       </div>
@@ -252,7 +230,7 @@ const ProjectsPage = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1 border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
+                      className="flex-1 border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200"
                       onClick={() => navigate(`/projects/${project.id}`)}
                     >
                       <Eye className="h-3 w-3 mr-1" />
@@ -261,7 +239,7 @@ const ProjectsPage = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1 border-gray-200 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800/50"
+                      className="flex-1 border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200"
                       onClick={() => handleEditProject(project)}
                     >
                       <Edit className="h-3 w-3 mr-1" />
@@ -270,7 +248,7 @@ const ProjectsPage = () => {
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="border-red-200 hover:bg-red-50 text-red-600 dark:border-red-800 dark:hover:bg-red-900/20 dark:text-red-400"
+                      className="border-red-200 hover:bg-red-50 text-red-600 dark:border-red-800 dark:hover:bg-red-900/20 dark:text-red-400 transition-all duration-200"
                       onClick={() => handleDeleteProject(project)}
                     >
                       <Trash2 className="h-3 w-3" />
@@ -333,13 +311,7 @@ const ProjectsPage = () => {
         confirmText="Delete Project"
         type="danger"
       />
-      
-      {/* API Key Modal */}
-      <ApiKeyModal
-        isOpen={showApiKeyModal}
-        onClose={() => setShowApiKeyModal(false)}
-        onCreateKey={handleCreateApiKey}
-      />
+
     </DashboardLayout>
   )
 }

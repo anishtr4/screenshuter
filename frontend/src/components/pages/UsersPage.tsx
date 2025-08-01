@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Button } from '@/components/ui/button'
-import { GlassCard, GlassCardContent } from '@/components/ui/glass-card'
 import { useAuth } from '@/hooks/useAuth'
 import { apiClient } from '@/lib/api'
 import { toast } from 'sonner'
@@ -124,11 +123,11 @@ export function UsersPage() {
   const getRoleColor = (role: string) => {
     switch (role) {
       case 'super_admin':
-        return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200'
+        return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300'
       case 'admin':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300'
       default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
+        return 'bg-slate-100 text-slate-800 dark:bg-slate-800/50 dark:text-slate-300'
     }
   }
 
@@ -300,25 +299,33 @@ export function UsersPage() {
 
   return (
     <DashboardLayout title="Users" subtitle="Manage user accounts and permissions">
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Users ({filteredUsers.length})
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage user accounts and their access permissions
-            </p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Users className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                Users ({filteredUsers.length})
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">
+                Manage user accounts and their access permissions
+              </p>
+            </div>
           </div>
           <div className="flex items-center space-x-3">
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              className="border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-slate-300"
+            >
               <Download className="h-4 w-4 mr-2" />
               Export
             </Button>
             <Button 
               onClick={() => setShowAddModal(true)}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold"
             >
               <Plus className="h-4 w-4 mr-2" />
               Invite User
@@ -329,20 +336,20 @@ export function UsersPage() {
         {/* Search and Filters */}
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
             <input
               type="text"
               placeholder="Search users by name or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
             />
           </div>
           <div className="flex items-center space-x-3">
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
             >
               <option value="all">All Roles</option>
               <option value="super_admin">Super Admin</option>
@@ -352,13 +359,16 @@ export function UsersPage() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              className="px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
             >
               <option value="all">All Status</option>
               <option value="active">Active</option>
               <option value="inactive">Inactive</option>
             </select>
-            <Button variant="outline">
+            <Button 
+              variant="outline"
+              className="border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-slate-300"
+            >
               <Filter className="h-4 w-4 mr-2" />
               More Filters
             </Button>
@@ -367,9 +377,9 @@ export function UsersPage() {
 
         {/* Bulk Actions */}
         {selectedUsers.length > 0 && (
-          <div className="flex items-center justify-between p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-700">
+          <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl border border-blue-200 dark:border-blue-700 backdrop-blur-sm">
             <div className="flex items-center space-x-3">
-              <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
                 {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected
               </span>
             </div>
@@ -424,14 +434,18 @@ export function UsersPage() {
         )}
 
         {/* Users Table */}
-        <GlassCard>
-          <GlassCardContent className="p-0">
+        <div className="relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
+          <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+          
+          <div className="relative">
             {loading ? (
               <div className="p-6">
                 <div className="space-y-4">
                   {[...Array(4)].map((_, i) => (
                     <div key={i} className="animate-pulse">
-                      <div className="h-16 bg-gray-200 dark:bg-gray-700 rounded-lg"></div>
+                      <div className="h-16 bg-slate-200 dark:bg-slate-700 rounded-xl"></div>
                     </div>
                   ))}
                 </div>
@@ -584,36 +598,45 @@ export function UsersPage() {
                 </table>
               </div>
             )}
-          </GlassCardContent>
-        </GlassCard>
+          </div>
+        </div>
 
         {/* Empty State */}
         {!loading && filteredUsers.length === 0 && (
-          <GlassCard>
-            <GlassCardContent className="p-12">
+          <div className="relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40">
+            {/* Background Pattern */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
+            <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+            
+            <div className="relative p-12">
               <div className="text-center">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                <div className="relative mb-8">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-full blur-2xl"></div>
+                  <div className="relative p-4 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl shadow-lg mx-auto w-fit">
+                    <Users className="h-12 w-12 text-white" />
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">
                   {users.length === 0 ? 'No users found' : 'No users match your filters'}
                 </h3>
-                <p className="text-gray-600 dark:text-gray-400 mb-4">
+                <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
                   {users.length === 0 
-                    ? 'Invite users to start collaborating on projects'
-                    : 'Try adjusting your search or filter criteria'
+                    ? 'Invite users to start collaborating on projects and manage access permissions.'
+                    : 'Try adjusting your search or filter criteria to find the users you\'re looking for.'
                   }
                 </p>
                 {users.length === 0 && (
                   <Button 
                     onClick={() => setShowAddModal(true)}
-                    className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3 rounded-xl font-semibold text-base"
                   >
-                    <Plus className="h-4 w-4 mr-2" />
+                    <Plus className="h-5 w-5 mr-2" />
                     Invite Your First User
                   </Button>
                 )}
               </div>
-            </GlassCardContent>
-          </GlassCard>
+            </div>
+          </div>
         )}
 
         {/* Add User Modal */}

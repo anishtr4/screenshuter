@@ -1,20 +1,19 @@
 import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Button } from '@/components/ui/button'
-import { GlassCard, GlassCardContent } from '@/components/ui/glass-card'
+
 import { apiClient } from '@/lib/api'
 import { ApiKeyModal } from '../modals/ApiKeyModal'
 import { toast } from 'sonner'
 import { 
   Key, 
   Plus, 
-  Copy, 
   Trash2, 
-  Eye, 
-  EyeOff,
   Calendar,
-  Activity
+  Activity,
+  Shield
 } from 'lucide-react'
+import { ConfirmationModal } from '@/components/modals/ConfirmationModal'
 
 interface ApiKeyData {
   id: string
@@ -29,8 +28,9 @@ interface ApiKeyData {
 export function ApiKeysPage() {
   const [apiKeys, setApiKeys] = useState<ApiKeyData[]>([])
   const [loading, setLoading] = useState(true)
-  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({})
   const [showApiKeyModal, setShowApiKeyModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [keyToDelete, setKeyToDelete] = useState<ApiKeyData | null>(null)
 
   useEffect(() => {
     document.title = 'API Keys - Screenshot SaaS'
@@ -65,31 +65,7 @@ export function ApiKeysPage() {
     return date.toLocaleDateString()
   }
 
-  const toggleKeyVisibility = (keyId: string) => {
-    setShowKeys(prev => ({
-      ...prev,
-      [keyId]: !prev[keyId]
-    }))
-  }
 
-  const copyToClipboard = (text: string) => {
-    if (!text) {
-      toast.error('No API key to copy')
-      return
-    }
-    navigator.clipboard.writeText(text)
-    toast.success('API key copied to clipboard!')
-  }
-
-  const maskApiKey = (key: string) => {
-    if (!key || typeof key !== 'string') {
-      return '••••••••••••••••••••••••'
-    }
-    if (key.length < 12) {
-      return '••••••••••••••••••••••••'
-    }
-    return key.substring(0, 8) + '••••••••••••••••' + key.substring(key.length - 4)
-  }
 
   const handleCreateKey = async (name: string) => {
     try {
@@ -133,62 +109,88 @@ export function ApiKeysPage() {
     }
   }
 
+  const confirmDelete = (apiKey: ApiKeyData) => {
+    setKeyToDelete(apiKey)
+    setShowDeleteModal(true)
+  }
+
+  const handleConfirmDelete = async () => {
+    if (keyToDelete) {
+      await handleDeleteKey(keyToDelete.id)
+      setShowDeleteModal(false)
+      setKeyToDelete(null)
+    }
+  }
+
 
 
   return (
-    <DashboardLayout title="API Keys" subtitle="Manage your API keys and access tokens">
-      <div className="space-y-6">
+    <DashboardLayout title="API Keys" subtitle="Manage your API keys for external integrations">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              API Keys
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Create and manage API keys for programmatic access
-            </p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Key className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                API Keys
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">
+                Manage your API keys for external integrations
+              </p>
+            </div>
           </div>
           <Button 
             onClick={() => setShowApiKeyModal(true)}
-            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold"
           >
             <Plus className="h-4 w-4 mr-2" />
             Create API Key
           </Button>
         </div>
 
-        {/* API Keys List */}
+        {/* Loading State */}
         {loading ? (
-          <div className="grid gap-4">
-            {[...Array(2)].map((_, i) => (
+          <div className="grid gap-6">
+            {[...Array(3)].map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-32 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 p-6">
+                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg mb-2"></div>
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg w-2/3"></div>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid gap-6">
             {apiKeys.map((apiKey) => (
-              <GlassCard key={apiKey.id} className="hover:shadow-lg transition-shadow">
-                <GlassCardContent className="p-6">
+              <div key={apiKey.id} className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01]">
+                {/* Background Pattern */}
+                <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
+                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+                
+                <div className="relative p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center space-x-3 mb-4">
-                        <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-600">
-                          <Key className="h-5 w-5 text-white" />
+                      <div className="flex items-center space-x-4 mb-4">
+                        <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                          <Key className="h-6 w-6 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-gray-900 dark:text-white">
+                          <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                             {apiKey.name}
                           </h3>
-                          <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-400">
-                            <div className="flex items-center space-x-1">
-                              <Calendar className="h-3 w-3" />
+                          <div className="flex items-center space-x-4 text-sm text-slate-600 dark:text-slate-400 mt-2">
+                            <div className="flex items-center space-x-2">
+                              <Calendar className="h-4 w-4 text-blue-500" />
                               <span>Created {formatDate(apiKey.createdAt)}</span>
                             </div>
                             {apiKey.lastUsed && (
-                              <div className="flex items-center space-x-1">
-                                <Activity className="h-3 w-3" />
+                              <div className="flex items-center space-x-2">
+                                <Activity className="h-4 w-4 text-blue-500" />
                                 <span>Last used {formatDate(apiKey.lastUsed)}</span>
                               </div>
                             )}
@@ -196,75 +198,64 @@ export function ApiKeysPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center space-x-2 bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                        <code className="flex-1 text-sm font-mono text-gray-700 dark:text-gray-300">
-                          {(() => {
-                            const keyValue = apiKey.key || apiKey.token || ''
-                            return showKeys[apiKey.id] ? (keyValue || 'No key available') : maskApiKey(keyValue)
-                          })()}
-                        </code>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleKeyVisibility(apiKey.id)}
-                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                          {showKeys[apiKey.id] ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => copyToClipboard(apiKey.key || apiKey.token || '')}
-                          className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
+                      {/* API Key Placeholder */}
+                      <div className="flex items-center space-x-3 bg-slate-50/80 dark:bg-slate-800/80 rounded-xl p-4 border border-slate-200/50 dark:border-slate-700/50">
+                        <Shield className="h-5 w-5 text-blue-500 flex-shrink-0" />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                            API Key (Hidden for Security)
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400">
+                            Your API key is securely stored and ready to use
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2 ml-4">
-                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    <div className="flex items-center space-x-3 ml-4">
+                      <div className={`px-3 py-1.5 rounded-full text-xs font-semibold ${
                         apiKey.isActive 
-                          ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-                          : 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
+                          ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
+                          : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300'
                       }`}>
                         {apiKey.isActive ? 'Active' : 'Inactive'}
                       </div>
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDeleteKey(apiKey.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        onClick={() => confirmDelete(apiKey)}
+                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl p-2 transition-all duration-200"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                </GlassCardContent>
-              </GlassCard>
+                </div>
+              </div>
             ))}
           </div>
         )}
 
         {/* Empty State */}
         {!loading && apiKeys.length === 0 && (
-          <div className="text-center py-12">
-            <Key className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          <div className="text-center py-16">
+            <div className="relative mb-8">
+              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-full blur-2xl"></div>
+              <div className="relative bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-2xl shadow-2xl mx-auto w-fit">
+                <Key className="h-16 w-16 text-white" />
+              </div>
+            </div>
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3">
               No API keys yet
             </h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Create your first API key to start using our API
+            <p className="text-slate-600 dark:text-slate-400 mb-8 max-w-md mx-auto">
+              Create your first API key to start integrating with our platform and unlock powerful automation capabilities.
             </p>
             <Button 
               onClick={() => setShowApiKeyModal(true)}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-8 py-3 rounded-xl font-semibold text-base"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-5 w-5 mr-2" />
               Create Your First API Key
             </Button>
           </div>
@@ -276,6 +267,18 @@ export function ApiKeysPage() {
         isOpen={showApiKeyModal}
         onClose={() => setShowApiKeyModal(false)}
         onCreateKey={handleCreateKey}
+      />
+      
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete API Key"
+        description={`Are you sure you want to delete the API key "${keyToDelete?.name}"? This action cannot be undone and will immediately revoke access for any applications using this key.`}
+        confirmText="Delete Key"
+        type="danger"
+        icon="key"
       />
     </DashboardLayout>
   )

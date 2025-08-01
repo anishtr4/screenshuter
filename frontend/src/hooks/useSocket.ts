@@ -18,6 +18,7 @@ interface CollectionProgress {
   completedScreenshots: number
   progress: number
   stage: string
+  isScrolling?: boolean // Optional flag to indicate if auto-scroll is in progress
 }
 
 export const useSocket = () => {

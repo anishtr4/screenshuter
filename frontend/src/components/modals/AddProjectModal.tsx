@@ -37,22 +37,22 @@ export function AddProjectModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-orange-900/20 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/20 backdrop-blur-sm">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-orange-900/30 backdrop-blur-sm"
+        className="absolute inset-0 bg-slate-900/30 backdrop-blur-sm"
         onClick={handleClose}
       />
       
       {/* Modal */}
-      <div className="relative w-full max-w-md mx-auto backdrop-blur-2xl bg-white/30 dark:bg-orange-900/40 border border-orange-200/30 dark:border-orange-700/30 rounded-3xl shadow-2xl p-8 animate-in zoom-in-95 duration-300">
+      <div className="relative w-full max-w-md mx-auto backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/40 dark:border-slate-700/40 rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-300">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
-            <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 shadow-lg">
+            <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg">
               <FolderOpen className="h-5 w-5 text-white" />
             </div>
-            <h2 className="text-xl font-bold bg-gradient-to-r from-orange-900 to-amber-800 dark:from-orange-100 dark:to-amber-200 bg-clip-text text-transparent">
+            <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
               Create New Project
             </h2>
           </div>
@@ -61,7 +61,7 @@ export function AddProjectModal({
             size="sm"
             onClick={handleClose}
             disabled={loading}
-            className="h-8 w-8 p-0 hover:bg-orange-100/50 dark:hover:bg-orange-800/50 rounded-xl"
+            className="h-8 w-8 p-0 hover:bg-slate-100/50 dark:hover:bg-slate-800/50 rounded-xl"
           >
             <X className="h-4 w-4" />
           </Button>
@@ -70,7 +70,7 @@ export function AddProjectModal({
         {/* Form */}
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-orange-900 dark:text-orange-100 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Project Name *
             </label>
             <input
@@ -78,14 +78,14 @@ export function AddProjectModal({
               value={projectName}
               onChange={(e) => setProjectName(e.target.value)}
               placeholder="Enter project name"
-              className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-orange-900/20 backdrop-blur-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-orange-900 dark:text-orange-100 placeholder-orange-600/50 dark:placeholder-orange-400/50"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-slate-900 dark:text-slate-100 placeholder-slate-500/70 transition-all duration-200 shadow-sm"
               disabled={loading}
               autoFocus
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-orange-900 dark:text-orange-100 mb-2">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
               Description (Optional)
             </label>
             <textarea
@@ -93,7 +93,7 @@ export function AddProjectModal({
               onChange={(e) => setProjectDescription(e.target.value)}
               placeholder="Enter project description"
               rows={3}
-              className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-orange-900/20 backdrop-blur-sm focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-orange-900 dark:text-orange-100 placeholder-orange-600/50 dark:placeholder-orange-400/50 resize-none"
+              className="w-full px-4 py-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 text-slate-900 dark:text-slate-100 placeholder-slate-500/70 resize-none transition-all duration-200 shadow-sm"
               disabled={loading}
             />
           </div>
@@ -105,14 +105,14 @@ export function AddProjectModal({
             variant="outline"
             onClick={handleClose}
             disabled={loading}
-            className="border-orange-200 hover:bg-orange-50 text-orange-700 dark:border-orange-700 dark:hover:bg-orange-900/20 dark:text-orange-300"
+            className="border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:hover:bg-slate-800/20 dark:text-slate-300 font-medium"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={!projectName.trim() || loading}
-            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-lg"
+            className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Creating...' : 'Create Project'}
           </Button>
