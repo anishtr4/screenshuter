@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 import { Button } from '@/components/ui/button'
-import { GlassCard, GlassCardContent } from '@/components/ui/glass-card'
+
 import { apiClient } from '@/lib/api'
 import { 
   Save, 
@@ -9,7 +9,8 @@ import {
   Globe,
   Shield,
   Clock,
-  HardDrive
+  HardDrive,
+  Settings
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -179,19 +180,19 @@ export function ConfigsPage() {
   }
 
   const renderSettingInput = (section: ConfigSection, setting: ConfigSetting) => {
-    const commonClasses = "w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+    const commonClasses = "w-full px-4 py-3 border border-slate-200 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 shadow-sm hover:shadow-md"
     
     switch (setting.type) {
       case 'boolean':
         return (
-          <label className="flex items-center space-x-2 cursor-pointer">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={setting.value as boolean}
               onChange={(e) => handleSettingChange(section.id, setting.key, e.target.checked)}
-              className="rounded border-gray-300 text-orange-600 focus:ring-orange-500"
+              className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-5 h-5"
             />
-            <span className="text-sm text-gray-700 dark:text-gray-300">
+            <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
               {setting.value ? 'Enabled' : 'Disabled'}
             </span>
           </label>
@@ -233,22 +234,28 @@ export function ConfigsPage() {
 
   return (
     <DashboardLayout title="Configs" subtitle="System configuration and settings">
-      <div className="space-y-6">
+      <div className="space-y-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              System Configuration
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-1">
-              Manage application settings and configuration
-            </p>
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center space-x-4">
+            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+              <Settings className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                System Configuration
+              </h1>
+              <p className="text-slate-600 dark:text-slate-400 mt-1">
+                Manage application settings and configuration
+              </p>
+            </div>
           </div>
           <div className="flex items-center space-x-3">
             <Button
               variant="outline"
               onClick={handleReset}
               disabled={loading}
+              className="border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200 px-4 py-2 rounded-xl"
             >
               <RotateCcw className="h-4 w-4 mr-2" />
               Reset
@@ -256,7 +263,7 @@ export function ConfigsPage() {
             <Button
               onClick={handleSave}
               disabled={saving}
-              className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold"
             >
               {saving ? (
                 <>
@@ -276,9 +283,16 @@ export function ConfigsPage() {
         {/* Config Sections */}
         {loading ? (
           <div className="grid gap-6">
-            {[...Array(4)].map((_, i) => (
+            {[...Array(3)].map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-64 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+                <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 p-6">
+                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4"></div>
+                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg mb-6 w-2/3"></div>
+                  <div className="space-y-4">
+                    <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                    <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -287,31 +301,35 @@ export function ConfigsPage() {
             {configs.map((section) => {
               const Icon = section.icon
               return (
-                <GlassCard key={section.id}>
-                  <GlassCardContent className="p-6">
-                    <div className="flex items-center space-x-3 mb-6">
-                      <div className="p-2 rounded-lg bg-gradient-to-r from-orange-500 to-amber-600">
-                        <Icon className="h-5 w-5 text-white" />
+                <div key={section.id} className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 hover:shadow-2xl transition-all duration-300">
+                  {/* Background Pattern */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+                  
+                  <div className="relative p-6">
+                    <div className="flex items-center space-x-4 mb-6">
+                      <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <Icon className="h-6 w-6 text-white" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white">
+                        <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                           {section.title}
                         </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
                           {section.description}
                         </p>
                       </div>
                     </div>
                     
-                    <div className="grid gap-4">
+                    <div className="grid gap-6">
                       {section.settings.map((setting) => (
-                        <div key={setting.key} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start">
+                        <div key={setting.key} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200/30 dark:border-slate-700/30">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
                               {setting.label}
                             </label>
                             {setting.description && (
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-xs text-slate-500 dark:text-slate-400">
                                 {setting.description}
                               </p>
                             )}
@@ -322,8 +340,8 @@ export function ConfigsPage() {
                         </div>
                       ))}
                     </div>
-                  </GlassCardContent>
-                </GlassCard>
+                  </div>
+                </div>
               )
             })}
           </div>

@@ -14,7 +14,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'react-hot-toast'
 import { DashboardLayout } from '../layout/DashboardLayout'
-import { Button } from '../ui/Button'
+import { Button } from '@/components/ui/button'
 import { AddScreenshotModal } from '../modals/AddScreenshotModal'
 import { FullImageModal } from '../modals/FullImageModal'
 import { CollectionFramesModal } from '../modals/CollectionFramesModal'
@@ -130,8 +130,17 @@ const ProjectDetailPage: React.FC = () => {
   useEffect(() => {
     // Handle collection completion - just clear progress data, no API calls
     Object.values(collectionProgress).forEach((progress) => {
-      if (progress.progress >= 100) {
-        console.log('Collection completed (socket only):', progress.collectionId)
+      // Only consider collection complete if:
+      // 1. Progress is 100% AND
+      // 2. Not currently scrolling (isScrolling is false or undefined) AND
+      // 3. Stage doesn't indicate ongoing work
+      const isActuallyComplete = progress.progress >= 100 && 
+                                !progress.isScrolling && 
+                                !progress.stage?.includes('Starting') &&
+                                !progress.stage?.includes('Scrolling')
+      
+      if (isActuallyComplete) {
+        console.log('Collection actually completed (socket only):', progress.collectionId, progress.stage)
         // Only clear progress data, no API refresh
         setTimeout(() => {
           clearCollectionProgress(progress.collectionId)
@@ -175,7 +184,7 @@ const ProjectDetailPage: React.FC = () => {
   // Load image URLs for thumbnails using blob URLs with proper auth
   const loadImageUrls = async (screenshotsToLoad: Screenshot[]) => {
     const newUrls: Record<string, string> = {}
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
     
     for (const screenshot of screenshotsToLoad) {
       const screenshotId = screenshot.id || screenshot._id
@@ -333,7 +342,7 @@ const ProjectDetailPage: React.FC = () => {
       
       // Load thumbnails for all screenshots in the collection
       const newUrls: Record<string, string> = {}
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       const token = localStorage.getItem('token')
       
       for (const screenshot of collectionScreenshots) {
@@ -577,26 +586,29 @@ const ProjectDetailPage: React.FC = () => {
           </div>
         )}
 
-        {/* Screenshots Grid */}
+        {/* Professional Screenshots Grid */}
         {filteredScreenshots.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl rounded-2xl shadow-xl border border-white/20 dark:border-white/10 p-12 max-w-md mx-auto">
-              <Camera className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <div className="text-center py-16">
+            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-2xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 p-12 max-w-md mx-auto group hover:shadow-xl transition-all duration-300">
+              <div className="relative mb-6">
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-indigo-100/50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full blur-2xl group-hover:blur-xl transition-all duration-300"></div>
+                <Camera className="h-16 w-16 text-slate-400 dark:text-slate-500 mx-auto relative group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors duration-300" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">
                 {searchTerm ? 'No screenshots found' : 'No screenshots yet'}
               </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
+              <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
                 {searchTerm 
-                  ? 'Try adjusting your search terms'
-                  : 'Add your first screenshot to get started'
+                  ? 'Try adjusting your search terms or clear filters'
+                  : 'Create your first screenshot to start building your collection'
                 }
               </p>
               {!searchTerm && (
                 <Button 
-                  className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white shadow-lg"
+                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3 rounded-xl font-semibold"
                   onClick={() => setShowAddModal(true)}
                 >
-                  <Plus className="h-4 w-4 mr-2" />
+                  <Plus className="h-5 w-5 mr-2" />
                   Add Screenshot
                 </Button>
               )}
@@ -633,11 +645,11 @@ const ProjectDetailPage: React.FC = () => {
               return (
                 <div
                   key={screenshotId}
-                  className="group relative overflow-hidden rounded-2xl bg-white/40 dark:bg-gray-900/40 backdrop-blur-2xl shadow-xl border border-white/20 dark:border-white/10 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
+                  className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02] hover:border-blue-200/60 dark:hover:border-blue-700/60"
                 >
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-white/10 to-transparent rounded-full blur-xl"></div>
+                  {/* Professional Background Pattern */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-slate-50/30 to-transparent dark:from-slate-700/20"></div>
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-100/20 to-transparent dark:from-blue-900/20 rounded-full blur-xl group-hover:from-blue-200/30 dark:group-hover:from-blue-800/30 transition-all duration-300"></div>
                   
                   {/* Socket Progress Indicators */}
                   {(() => {
@@ -651,9 +663,9 @@ const ProjectDetailPage: React.FC = () => {
                     if (progress && progress.status === 'processing') {
                       return (
                         <div className="absolute top-4 right-4 z-10">
-                          <div className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
-                            <div className="flex items-center space-x-1">
-                              <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
+                          <div className="bg-blue-50/90 text-blue-700 dark:bg-blue-900/80 dark:text-blue-300 px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50 shadow-lg">
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent"></div>
                               <span>{progress.progress}% - {progress.stage}</span>
                             </div>
                           </div>
@@ -665,9 +677,9 @@ const ProjectDetailPage: React.FC = () => {
                     if (collProgress && collProgress.progress < 100) {
                       return (
                         <div className="absolute top-4 right-4 z-10">
-                          <div className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-full text-xs font-medium">
-                            <div className="flex items-center space-x-1">
-                              <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
+                          <div className="bg-indigo-50/90 text-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-sm border border-indigo-200/50 dark:border-indigo-700/50 shadow-lg">
+                            <div className="flex items-center space-x-2">
+                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent"></div>
                               <span>{collProgress.progress}% - {collProgress.stage}</span>
                             </div>
                           </div>

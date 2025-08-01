@@ -30,7 +30,7 @@ const LoginPage = () => {
     try {
       console.log('Attempting login with:', { email: formData.email });
       
-      const response = await axios.post('http://localhost:3000/api/v1/auth/login', {
+      const response = await axios.post('http://localhost:8002/api/auth/login', {
         email: formData.email,
         password: formData.password
       });

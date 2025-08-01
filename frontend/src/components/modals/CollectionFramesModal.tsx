@@ -58,7 +58,7 @@ export const CollectionFramesModal = ({
     
     try {
       const screenshotId = frame._id || frame.id
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       
       const response = await fetch(`${apiUrl}/images/${screenshotId}?type=full`, {
         headers: {
@@ -91,7 +91,7 @@ export const CollectionFramesModal = ({
 
     try {
       setDownloading(true)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       
       const response = await fetch(`${apiUrl}/collections/${collection.id}/download`, {
         headers: {

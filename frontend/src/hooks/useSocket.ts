@@ -18,6 +18,7 @@ interface CollectionProgress {
   completedScreenshots: number
   progress: number
   stage: string
+  isScrolling?: boolean // Optional flag to indicate if auto-scroll is in progress
 }
 
 export const useSocket = () => {
@@ -34,7 +35,7 @@ export const useSocket = () => {
     }
 
     // Initialize socket connection
-    const socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:3000', {
+    const socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:8002', {
       transports: ['websocket', 'polling'],
       timeout: 20000,
       auth: {

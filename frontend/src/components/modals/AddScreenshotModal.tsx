@@ -178,29 +178,18 @@ export function AddScreenshotModal({
         setLocalLoading(false)
       }
     } else if (formData.mode === 'frame') {
-      // Handle frame screenshots directly via API
-      try {
-        setLocalLoading(true)
-        await apiClient.createScreenshot(
-          formData.url, 
-          formData.projectId, 
-          formData.frameOptions?.timeFrames,
-          {
-            ...formData.options,
-            autoScroll: formData.frameOptions?.autoScroll
-          }
-        )
-        toast.success('Frame screenshot capture started!')
-        
-        // Don't call onSubmit for frame screenshots as API call is already made
-        // onSubmit(formData) // This would trigger a second API call
-        onClose() // Close modal on success
-      } catch (error) {
-        console.error('Error capturing frame screenshots:', error)
-        toast.error('Failed to start frame screenshot capture')
-      } finally {
-        setLocalLoading(false)
+      // Handle frame screenshots through onSubmit so they show in grid with progress
+      const frameData = {
+        ...formData,
+        timeFrames: formData.frameOptions?.timeFrames,
+        options: {
+          ...formData.options,
+          autoScroll: formData.frameOptions?.autoScroll
+        }
       }
+      
+      console.log('🎬 Frame screenshot data being submitted:', frameData)
+      onSubmit(frameData)
     } else {
       // Normal single page screenshot
       onSubmit(formData)
@@ -236,21 +225,21 @@ export function AddScreenshotModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-orange-200/30 dark:border-orange-700/30 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-orange-200/30 dark:border-orange-700/30">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-300">
+      <div className="bg-white/95 dark:bg-slate-800/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-slate-200/50 dark:border-slate-700/50 w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-in slide-in-from-bottom-4 duration-300">
+        {/* Professional Header */}
+        <div className="flex items-center justify-between p-6 border-b border-slate-200/30 dark:border-slate-700/30">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-white">
+            <div className="p-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg">
               <Camera className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-orange-900 dark:text-orange-100">
+              <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 {crawlStep === 'selecting' ? 'Select URLs to Capture' : 
                  crawlStep === 'discovering' ? 'Discovering URLs...' : 
                  'Add Screenshot'}
               </h2>
-              <p className="text-sm text-orange-600 dark:text-orange-400">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
                 {crawlStep === 'selecting' ? `Found ${discoveredUrls.length} pages to capture` :
                  crawlStep === 'discovering' ? 'Crawling website for pages...' :
                  'Capture a screenshot of any webpage'}
@@ -261,7 +250,7 @@ export function AddScreenshotModal({
             variant="ghost"
             size="sm"
             onClick={onClose}
-            className="text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-xl"
+            className="text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded-xl p-2 transition-all duration-200"
           >
             <X className="h-5 w-5" />
           </Button>
@@ -278,7 +267,7 @@ export function AddScreenshotModal({
                     type="button"
                     variant="outline"
                     onClick={selectAllUrls}
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    className="text-slate-600 border-slate-300 hover:bg-slate-50"
                   >
                     Select All ({discoveredUrls.length})
                   </Button>
@@ -286,25 +275,25 @@ export function AddScreenshotModal({
                     type="button"
                     variant="outline"
                     onClick={deselectAllUrls}
-                    className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                    className="text-slate-600 border-slate-300 hover:bg-slate-50"
                   >
                     Deselect All
                   </Button>
                 </div>
-                <div className="text-sm text-orange-600 dark:text-orange-400">
+                <div className="text-sm text-slate-600 dark:text-slate-400">
                   {selectedUrls.length} of {discoveredUrls.length} selected
                 </div>
               </div>
               
-              <div className="max-h-96 overflow-y-auto space-y-2 border border-orange-200/30 dark:border-orange-700/30 rounded-xl p-4">
+              <div className="max-h-96 overflow-y-auto space-y-2 border border-slate-200/40 dark:border-slate-700/40 rounded-xl p-4 bg-slate-50/20 dark:bg-slate-900/10">
                 {discoveredUrls.map((url, index) => (
                   <div
                     key={index}
                     className={cn(
                       "flex items-center gap-3 p-3 rounded-lg border transition-all duration-200 cursor-pointer",
                       selectedUrls.includes(url)
-                        ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
-                        : "border-orange-200/50 dark:border-orange-700/50 hover:border-orange-300 dark:hover:border-orange-600"
+                        ? "border-slate-500 bg-slate-100 dark:bg-slate-700/20"
+                        : "border-slate-200/50 dark:border-slate-700/50 hover:border-slate-300 dark:hover:border-slate-600"
                     )}
                     onClick={() => toggleUrlSelection(url)}
                   >
@@ -312,10 +301,10 @@ export function AddScreenshotModal({
                       type="checkbox"
                       checked={selectedUrls.includes(url)}
                       onChange={() => toggleUrlSelection(url)}
-                      className="rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+                      className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-orange-900 dark:text-orange-100 truncate">
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
                         {url}
                       </p>
                     </div>
@@ -328,14 +317,14 @@ export function AddScreenshotModal({
                   type="button"
                   variant="outline"
                   onClick={goBackToForm}
-                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                  className="text-slate-600 border-slate-300 hover:bg-slate-50 font-medium"
                 >
                   Back to Settings
                 </Button>
                 <Button
                   onClick={handleSubmit}
                   disabled={selectedUrls.length === 0 || isLoading || localLoading}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl px-6 py-3 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl px-6 py-3 font-semibold shadow-lg hover:shadow-xl transition-all duration-300"
                 >
                   {(isLoading || localLoading) ? (
                     <>
@@ -356,18 +345,19 @@ export function AddScreenshotModal({
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* URL Input */}
               <div>
-                <label className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-2 block">
-                  Website URL *
+                <label className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-3 block flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-blue-500" />
+                  Website URL
                 </label>
                 <div className="relative">
-                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-orange-500" />
+                  <Globe className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
                   <Input
                     placeholder="https://example.com"
                     value={formData.url}
                     onChange={(e) => handleUrlChange(e.target.value)}
                     className={cn(
-                      "pl-10 px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 placeholder-orange-500/60 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200",
-                      errors.url && "border-red-500"
+                      "pl-10 px-4 py-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 placeholder-slate-500/70 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm hover:shadow-md",
+                      errors.url && "border-red-500 focus:ring-red-500/50 focus:border-red-500"
                     )}
                   />
                 </div>
@@ -379,9 +369,9 @@ export function AddScreenshotModal({
                 )}
               </div>
 
-              {/* Mode Selection */}
+              {/* Professional Mode Selection */}
               <div>
-                <label className="text-sm font-medium text-orange-800 dark:text-orange-200 mb-3 block">
+                <label className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-4 block">
                   Capture Mode
                 </label>
                 <div className="grid grid-cols-3 gap-3">
@@ -389,25 +379,25 @@ export function AddScreenshotModal({
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, mode: 'normal' }))}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                      "p-4 rounded-xl border-2 transition-all duration-200 text-left hover:shadow-md group",
                       formData.mode === 'normal'
-                        ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
-                        : "border-orange-200/50 dark:border-orange-700/50 hover:border-orange-300 dark:hover:border-orange-600"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg"
+                        : "border-slate-200/60 dark:border-slate-700/60 hover:border-blue-300 dark:hover:border-blue-600 bg-white/50 dark:bg-slate-800/50"
                     )}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <Camera className={cn(
-                        "h-5 w-5",
-                        formData.mode === 'normal' ? "text-orange-600" : "text-orange-400"
+                        "h-5 w-5 transition-colors duration-200",
+                        formData.mode === 'normal' ? "text-blue-600" : "text-slate-500 group-hover:text-blue-500"
                       )} />
                       <span className={cn(
-                        "font-medium",
-                        formData.mode === 'normal' ? "text-orange-900 dark:text-orange-100" : "text-orange-700 dark:text-orange-300"
+                        "font-semibold transition-colors duration-200",
+                        formData.mode === 'normal' ? "text-blue-900 dark:text-blue-100" : "text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
                       )}>
                         Single Page
                       </span>
                     </div>
-                    <p className="text-sm text-orange-600 dark:text-orange-400">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
                       Capture a screenshot of one specific page
                     </p>
                   </button>
@@ -416,25 +406,25 @@ export function AddScreenshotModal({
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, mode: 'crawl' }))}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                      "p-4 rounded-xl border-2 transition-all duration-200 text-left hover:shadow-md group",
                       formData.mode === 'crawl'
-                        ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
-                        : "border-orange-200/50 dark:border-orange-700/50 hover:border-orange-300 dark:hover:border-orange-600"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg"
+                        : "border-slate-200/60 dark:border-slate-700/60 hover:border-blue-300 dark:hover:border-blue-600 bg-white/50 dark:bg-slate-800/50"
                     )}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <Search className={cn(
-                        "h-5 w-5",
-                        formData.mode === 'crawl' ? "text-orange-600" : "text-orange-400"
+                        "h-5 w-5 transition-colors duration-200",
+                        formData.mode === 'crawl' ? "text-blue-600" : "text-slate-500 group-hover:text-blue-500"
                       )} />
                       <span className={cn(
-                        "font-medium",
-                        formData.mode === 'crawl' ? "text-orange-900 dark:text-orange-100" : "text-orange-700 dark:text-orange-300"
+                        "font-semibold transition-colors duration-200",
+                        formData.mode === 'crawl' ? "text-blue-900 dark:text-blue-100" : "text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
                       )}>
                         Crawl Site
                       </span>
                     </div>
-                    <p className="text-sm text-orange-600 dark:text-orange-400">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
                       Discover and capture multiple pages from a website
                     </p>
                   </button>
@@ -443,51 +433,93 @@ export function AddScreenshotModal({
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, mode: 'frame' }))}
                     className={cn(
-                      "p-4 rounded-xl border-2 transition-all duration-200 text-left",
+                      "p-4 rounded-xl border-2 transition-all duration-200 text-left hover:shadow-md group",
                       formData.mode === 'frame'
-                        ? "border-orange-500 bg-orange-50 dark:bg-orange-900/20"
-                        : "border-orange-200/50 dark:border-orange-700/50 hover:border-orange-300 dark:hover:border-orange-600"
+                        ? "border-blue-500 bg-blue-50 dark:bg-blue-900/20 shadow-lg"
+                        : "border-slate-200/60 dark:border-slate-700/60 hover:border-blue-300 dark:hover:border-blue-600 bg-white/50 dark:bg-slate-800/50"
                     )}
                   >
                     <div className="flex items-center gap-3 mb-2">
                       <Clock className={cn(
-                        "h-5 w-5",
-                        formData.mode === 'frame' ? "text-orange-600" : "text-orange-400"
+                        "h-5 w-5 transition-colors duration-200",
+                        formData.mode === 'frame' ? "text-blue-600" : "text-slate-500 group-hover:text-blue-500"
                       )} />
                       <span className={cn(
-                        "font-medium",
-                        formData.mode === 'frame' ? "text-orange-900 dark:text-orange-100" : "text-orange-700 dark:text-orange-300"
+                        "font-semibold transition-colors duration-200",
+                        formData.mode === 'frame' ? "text-blue-900 dark:text-blue-100" : "text-slate-700 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-slate-100"
                       )}>
                         Time Frames
                       </span>
                     </div>
-                    <p className="text-sm text-orange-600 dark:text-orange-400">
+                    <p className="text-sm text-slate-600 dark:text-slate-400">
+/* ... */
                       Capture screenshots at specific time intervals
                     </p>
                   </button>
                 </div>
               </div>
 
-              {/* Frame Options */}
+              {/* Professional Frame Options */}
               {formData.mode === 'frame' && (
-                <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-xl p-4 border border-orange-200/30 dark:border-orange-700/30">
+                <div className="bg-blue-50/30 dark:bg-blue-900/10 rounded-xl p-5 border border-blue-200/40 dark:border-blue-700/40">
                   <div className="flex items-center gap-2 mb-4">
-                    <Clock className="h-4 w-4 text-orange-600" />
-                    <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                    <Clock className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                       Time Frame Settings
                     </span>
                   </div>
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="text-sm text-orange-700 dark:text-orange-300 mb-2 block">
+                      <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3 block">
                         Time Frames (seconds)
                       </label>
+                      
+                      {/* Professional Preset Options */}
+                      <div className="mb-4">
+                        <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-medium">Quick Presets:</p>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { label: 'Quick (0, 2, 5)', values: [0, 2, 5] },
+                            { label: 'Standard (0, 3, 6, 10)', values: [0, 3, 6, 10] },
+                            { label: 'Extended (0, 5, 10, 15, 20)', values: [0, 5, 10, 15, 20] },
+                            { label: 'Animation (0, 1, 2, 3, 4, 5)', values: [0, 1, 2, 3, 4, 5] }
+                          ].map((preset) => (
+                            <button
+                              key={preset.label}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  frameOptions: {
+                                    ...prev.frameOptions!,
+                                    timeFrames: preset.values
+                                  }
+                                }))
+                              }}
+                              className="px-3 py-1.5 text-xs rounded-lg border border-blue-200 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-all duration-200 font-medium"
+                            >
+                              {preset.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Custom Input */}
                       <Input
-                        placeholder="0, 2, 5, 10"
+                        placeholder="Enter custom times: 0, 2, 5, 10"
                         value={formData.frameOptions?.timeFrames.join(', ') || ''}
                         onChange={(e) => {
-                          const frames = e.target.value.split(',').map(f => parseInt(f.trim())).filter(f => !isNaN(f))
+                          // Better comma handling - allow spaces and handle various separators
+                          const input = e.target.value
+                          const frames = input
+                            .split(/[,\s]+/) // Split by comma or whitespace
+                            .map(f => f.trim())
+                            .filter(f => f !== '')
+                            .map(f => parseInt(f))
+                            .filter(f => !isNaN(f) && f >= 0 && f <= 300) // Validate range
+                            .sort((a, b) => a - b) // Sort ascending
+                          
                           setFormData(prev => ({
                             ...prev,
                             frameOptions: {
@@ -496,10 +528,53 @@ export function AddScreenshotModal({
                             }
                           }))
                         }}
-                        className="px-4 py-2 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                        onKeyDown={(e) => {
+                          // Allow comma input easily
+                          if (e.key === 'Enter') {
+                            e.preventDefault()
+                          }
+                        }}
+                        className="px-4 py-3 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
                       />
-                      <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                        Comma-separated list of seconds (e.g., 0, 2, 5, 10)
+                      
+                      {/* Current Selection Display */}
+                      {formData.frameOptions?.timeFrames && formData.frameOptions.timeFrames.length > 0 && (
+                        <div className="mt-3 p-3 rounded-lg bg-blue-50/50 dark:bg-blue-900/20 border border-blue-200/50 dark:border-blue-700/50">
+                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-2 font-medium">Selected frames:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {formData.frameOptions.timeFrames.map((time, index) => (
+                              <span
+                                key={index}
+                                className="inline-flex items-center px-2.5 py-1 text-xs bg-blue-100 dark:bg-blue-800 text-blue-700 dark:text-blue-300 rounded-lg font-medium"
+                              >
+                                {time}s
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newFrames = formData.frameOptions!.timeFrames.filter((_, i) => i !== index)
+                                    setFormData(prev => ({
+                                      ...prev,
+                                      frameOptions: {
+                                        ...prev.frameOptions!,
+                                        timeFrames: newFrames
+                                      }
+                                    }))
+                                  }}
+                                  className="ml-1.5 text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-200 transition-colors duration-200"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-blue-600 dark:text-blue-400 mt-2 font-medium">
+                            Total: {formData.frameOptions.timeFrames.length} frames
+                          </p>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                        💡 Tip: Use spaces or commas to separate times. Max 300 seconds per frame.
                       </p>
                     </div>
                     
@@ -518,9 +593,9 @@ export function AddScreenshotModal({
                             }
                           }
                         }))}
-                        className="rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+                        className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
                       />
-                      <label htmlFor="autoScroll" className="text-sm text-orange-700 dark:text-orange-300">
+                      <label htmlFor="autoScroll" className="text-sm text-slate-700 dark:text-slate-300 font-medium">
                         Enable auto-scroll capture after frames
                       </label>
                     </div>
@@ -528,7 +603,7 @@ export function AddScreenshotModal({
                     {formData.frameOptions?.autoScroll.enabled && (
                       <div className="grid grid-cols-2 gap-4 pl-6">
                         <div>
-                          <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                          <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block font-medium">
                             Scroll Selector
                           </label>
                           <Input
@@ -544,11 +619,11 @@ export function AddScreenshotModal({
                                 }
                               }
                             }))}
-                            className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                            className="px-3 py-2.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
                           />
                         </div>
                         <div>
-                          <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block">
+                          <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block font-medium">
                             Step Size (px)
                           </label>
                           <Input
@@ -566,7 +641,7 @@ export function AddScreenshotModal({
                                 }
                               }
                             }))}
-                            className="px-3 py-2 rounded-lg border border-orange-200/50 dark:border-orange-700/50 bg-white/70 dark:bg-gray-800/70 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                            className="px-3 py-2.5 rounded-lg border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
                           />
                         </div>
                       </div>
@@ -575,18 +650,18 @@ export function AddScreenshotModal({
                 </div>
               )}
 
-              {/* Basic Options */}
-              <div className="bg-orange-50/50 dark:bg-orange-900/10 rounded-xl p-4 border border-orange-200/30 dark:border-orange-700/30">
+              {/* Professional Basic Options */}
+              <div className="bg-slate-50/30 dark:bg-slate-900/10 rounded-xl p-5 border border-slate-200/40 dark:border-slate-700/40">
                 <div className="flex items-center gap-2 mb-4">
-                  <Settings className="h-4 w-4 text-orange-600" />
-                  <span className="text-sm font-medium text-orange-800 dark:text-orange-200">
+                  <Settings className="h-4 w-4 text-slate-600" />
+                  <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">
                     Screenshot Settings
                   </span>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block flex items-center gap-1">
+                    <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block flex items-center gap-1 font-medium">
                       <ArrowDown className="h-3 w-3" />
                       Width (px)
                     </label>
@@ -599,11 +674,11 @@ export function AddScreenshotModal({
                         ...prev,
                         options: { ...prev.options, width: parseInt(e.target.value) || 1920 }
                       }))}
-                      className="px-4 py-2 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                      className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block flex items-center gap-1">
+                    <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block flex items-center gap-1 font-medium">
                       <ArrowDown className="h-3 w-3 rotate-90" />
                       Height (px)
                     </label>
@@ -616,11 +691,11 @@ export function AddScreenshotModal({
                         ...prev,
                         options: { ...prev.options, height: parseInt(e.target.value) || 1080 }
                       }))}
-                      className="px-4 py-2 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                      className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
                     />
                   </div>
                   <div>
-                    <label className="text-sm text-orange-700 dark:text-orange-300 mb-1 block flex items-center gap-1">
+                    <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block flex items-center gap-1 font-medium">
                       <Clock className="h-3 w-3" />
                       Wait Time (ms)
                     </label>
@@ -634,7 +709,7 @@ export function AddScreenshotModal({
                         ...prev,
                         options: { ...prev.options, waitTime: parseInt(e.target.value) || 2000 }
                       }))}
-                      className="px-4 py-2 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                      className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
                     />
                   </div>
                 </div>
@@ -648,9 +723,9 @@ export function AddScreenshotModal({
                       ...prev,
                       options: { ...prev.options, fullPage: e.target.checked }
                     }))}
-                    className="rounded border-orange-300 text-orange-500 focus:ring-orange-500"
+                    className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
                   />
-                  <label htmlFor="fullPage" className="text-sm text-orange-700 dark:text-orange-300">
+                  <label htmlFor="fullPage" className="text-sm text-slate-700 dark:text-slate-300 font-medium">
                     Capture full page (scroll to bottom)
                   </label>
                 </div>
@@ -661,7 +736,7 @@ export function AddScreenshotModal({
                 <Button 
                   type="submit" 
                   disabled={isLoading || localLoading}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl px-6 py-3 font-semibold shadow-lg hover:shadow-xl transition-all duration-200"
+                  className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white rounded-xl px-6 py-3 font-semibold shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {(isLoading || localLoading) ? (
                     <>
@@ -695,7 +770,7 @@ export function AddScreenshotModal({
                   type="button" 
                   variant="outline" 
                   onClick={onClose}
-                  className="px-6 py-3 rounded-xl border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all duration-200"
+                  className="px-6 py-3 rounded-xl border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/20 transition-all duration-200 font-medium"
                 >
                   Cancel
                 </Button>

@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance } from 'axios'
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
 
 class ApiClient {
   private client: AxiosInstance
@@ -115,8 +115,19 @@ class ApiClient {
     }
     
     if (options) {
-      payload.options = options
+      // Extract autoScroll from options and put it at root level (backend expects it there)
+      if (options.autoScroll) {
+        payload.autoScroll = options.autoScroll
+      }
+      
+      // Put other options in options object
+      const { autoScroll, ...otherOptions } = options
+      if (Object.keys(otherOptions).length > 0) {
+        payload.options = otherOptions
+      }
     }
+    
+    console.log('🚀 API Client - Frame screenshot payload:', JSON.stringify(payload, null, 2))
     
     const response = await this.client.post(`/screenshots`, payload)
     return response.data

@@ -46,7 +46,7 @@ export const FullImageModal = ({ isOpen, onClose, screenshot, imageUrl }: FullIm
       setError(false)
       
       const screenshotId = screenshot._id || screenshot.id
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       
       const response = await fetch(`${apiUrl}/images/${screenshotId}?type=full`, {
         headers: {
