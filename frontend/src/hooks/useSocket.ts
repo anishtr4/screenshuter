@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
-import { useAuth } from './useAuth'
 
 interface ScreenshotProgress {
   screenshotId: string
@@ -22,54 +21,72 @@ interface CollectionProgress {
 }
 
 export const useSocket = () => {
-  const { user, isAuthenticated } = useAuth()
   const socketRef = useRef<Socket | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [screenshotProgress, setScreenshotProgress] = useState<Record<string, ScreenshotProgress>>({})
   const [collectionProgress, setCollectionProgress] = useState<Record<string, CollectionProgress>>({})
 
   useEffect(() => {
-    if (!isAuthenticated || !user) {
+    // Get auth token from localStorage
+    const token = localStorage.getItem('token')
+    if (!token) {
       return
     }
 
     // Initialize socket connection
-    const socket = io(process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:3000', {
+    const socket = io(import.meta.env.VITE_WS_URL || 'http://localhost:3000', {
       transports: ['websocket', 'polling'],
       timeout: 20000,
+      auth: {
+        token
+      }
     })
 
     socketRef.current = socket
 
     socket.on('connect', () => {
-
+      console.log('Socket connected:', socket.id)
       setIsConnected(true)
       
       // Join user-specific room
-      socket.emit('join-user-room', user.id)
+      const user = JSON.parse(localStorage.getItem('user') || '{}')
+      if (user.id) {
+        socket.emit('join-user-room', user.id)
+      }
     })
 
     socket.on('disconnect', () => {
-
+      console.log('Socket disconnected')
       setIsConnected(false)
     })
 
     // Listen for screenshot progress updates
     socket.on('screenshot-progress', (data: ScreenshotProgress) => {
-      // IGNORE individual screenshot progress to prevent collection screenshots from appearing
-      // Only log for debugging
-      console.log('Screenshot progress received (IGNORED):', data.screenshotId, data.status);
+      console.log('🚀 Screenshot progress received:', {
+        screenshotId: data.screenshotId,
+        status: data.status,
+        progress: data.progress + '%',
+        stage: data.stage,
+        metadata: data.metadata,
+        fullData: data
+      })
       
-      // Do NOT update screenshotProgress state to prevent any UI updates
-      // setScreenshotProgress(prev => ({
-      //   ...prev,
-      //   [data.screenshotId]: data
-      // }))
+      setScreenshotProgress(prev => ({
+        ...prev,
+        [data.screenshotId]: data
+      }))
     })
 
     // Listen for collection progress updates
     socket.on('collection-progress', (data: CollectionProgress) => {
-      console.log('Collection progress received:', data.collectionId, data.progress + '%', data.stage);
+      console.log('📚 Collection progress received:', {
+        collectionId: data.collectionId,
+        progress: data.progress + '%',
+        stage: data.stage,
+        completedScreenshots: data.completedScreenshots,
+        totalScreenshots: data.totalScreenshots,
+        fullData: data
+      })
       
       setCollectionProgress(prev => ({
         ...prev,
@@ -87,7 +104,7 @@ export const useSocket = () => {
       socketRef.current = null
       setIsConnected(false)
     }
-  }, [isAuthenticated, user])
+  }, [])
 
   const clearScreenshotProgress = (screenshotId: string) => {
     setScreenshotProgress(prev => {

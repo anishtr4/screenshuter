@@ -12,6 +12,8 @@ export const createDefaultAdmin = async (): Promise<void> => {
       const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
 
       const adminUser = new User({
+        firstName: 'Super',
+        lastName: 'Admin',
         email: adminEmail,
         password: adminPassword,
         role: 'super_admin',

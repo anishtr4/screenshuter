@@ -1,9 +1,18 @@
-'use client'
-
 import { useState } from 'react'
 import { X, FileText, Download, Settings } from 'lucide-react'
-import { Collection, Project } from '@/types'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+
+interface Collection {
+  id: string
+  name: string
+  screenshots?: any[]
+}
+
+interface Project {
+  id: string
+  name: string
+}
 
 interface PDFConfigModalProps {
   isOpen: boolean
@@ -102,12 +111,14 @@ export function PDFConfigModal({
               </p>
             </div>
           </div>
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={onClose}
-            className="text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-xl p-2 transition-colors"
+            className="h-8 w-8 p-0 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         {/* Content */}
@@ -121,7 +132,7 @@ export function PDFConfigModal({
               type="text"
               value={config.title}
               onChange={(e) => handleConfigChange('title', e.target.value)}
-              className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 placeholder-orange-500/60 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+              className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800/50 border border-orange-200/50 dark:border-orange-700/50 rounded-lg text-orange-900 dark:text-orange-100 placeholder-orange-500/50 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               placeholder="Enter PDF title"
             />
           </div>
@@ -135,7 +146,7 @@ export function PDFConfigModal({
               <select
                 value={config.layout}
                 onChange={(e) => handleConfigChange('layout', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800/50 border border-orange-200/50 dark:border-orange-700/50 rounded-lg text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="portrait">Portrait</option>
                 <option value="landscape">Landscape</option>
@@ -149,7 +160,7 @@ export function PDFConfigModal({
               <select
                 value={config.pageSize}
                 onChange={(e) => handleConfigChange('pageSize', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
+                className="w-full px-3 py-2 bg-white/50 dark:bg-gray-800/50 border border-orange-200/50 dark:border-orange-700/50 rounded-lg text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="A4">A4</option>
                 <option value="A3">A3</option>
@@ -159,44 +170,51 @@ export function PDFConfigModal({
             </div>
           </div>
 
-          {/* Image Settings */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
-                Image Size
-              </label>
-              <select
-                value={config.imageSize}
-                onChange={(e) => handleConfigChange('imageSize', e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
-              >
-                <option value="small">Small</option>
-                <option value="medium">Medium</option>
-                <option value="large">Large</option>
-                <option value="full">Full Page</option>
-              </select>
+          {/* Images Per Page */}
+          <div>
+            <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+              Images Per Page: {config.imagesPerPage}
+            </label>
+            <input
+              type="range"
+              min="1"
+              max={maxImagesPerPage}
+              value={config.imagesPerPage}
+              onChange={(e) => handleConfigChange('imagesPerPage', parseInt(e.target.value))}
+              className="w-full h-2 bg-orange-200/50 dark:bg-orange-700/50 rounded-lg appearance-none cursor-pointer slider"
+            />
+            <div className="flex justify-between text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">
+              <span>1</span>
+              <span>{maxImagesPerPage}</span>
             </div>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
-                Images per Page
-              </label>
-              <select
-                value={config.imagesPerPage}
-                onChange={(e) => handleConfigChange('imagesPerPage', parseInt(e.target.value))}
-                className="w-full px-4 py-3 rounded-xl border border-orange-200/50 dark:border-orange-700/50 bg-white/50 dark:bg-gray-800/50 text-orange-900 dark:text-orange-100 focus:ring-2 focus:ring-orange-500/50 focus:border-orange-500/50 transition-all duration-200"
-              >
-                {Array.from({ length: maxImagesPerPage }, (_, i) => i + 1).map(num => (
-                  <option key={num} value={num}>{num}</option>
-                ))}
-              </select>
+          {/* Image Size */}
+          <div>
+            <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
+              Image Size
+            </label>
+            <div className="grid grid-cols-4 gap-2">
+              {['small', 'medium', 'large', 'full'].map((size) => (
+                <button
+                  key={size}
+                  onClick={() => handleConfigChange('imageSize', size)}
+                  className={`px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    config.imageSize === size
+                      ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-lg'
+                      : 'bg-orange-100/50 dark:bg-orange-900/20 text-orange-600 dark:text-orange-400 hover:bg-orange-200/50 dark:hover:bg-orange-800/30'
+                  }`}
+                >
+                  {size.charAt(0).toUpperCase() + size.slice(1)}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Margin */}
           <div>
             <label className="block text-sm font-medium text-orange-800 dark:text-orange-200 mb-2">
-              Margin (mm): {config.margin}
+              Margin: {config.margin}mm
             </label>
             <input
               type="range"
@@ -204,8 +222,12 @@ export function PDFConfigModal({
               max="50"
               value={config.margin}
               onChange={(e) => handleConfigChange('margin', parseInt(e.target.value))}
-              className="w-full h-2 bg-orange-200/30 dark:bg-orange-700/30 rounded-lg appearance-none cursor-pointer slider accent-orange-500"
+              className="w-full h-2 bg-orange-200/50 dark:bg-orange-700/50 rounded-lg appearance-none cursor-pointer slider"
             />
+            <div className="flex justify-between text-xs text-orange-600/70 dark:text-orange-400/70 mt-1">
+              <span>10mm</span>
+              <span>50mm</span>
+            </div>
           </div>
 
           {/* Metadata Options */}
@@ -256,8 +278,8 @@ export function PDFConfigModal({
               <p>Layout: {config.layout} {config.pageSize}</p>
               <p>Images: {config.imagesPerPage} per page, {config.imageSize} size</p>
               <p>Margin: {config.margin}mm</p>
-              {type === 'collection' && collection?.frames && (
-                <p>Total pages: ~{Math.ceil(collection.frames.length / config.imagesPerPage)}</p>
+              {type === 'collection' && collection?.screenshots && (
+                <p>Total pages: ~{Math.ceil(collection.screenshots.length / config.imagesPerPage)}</p>
               )}
             </div>
           </div>
@@ -265,30 +287,31 @@ export function PDFConfigModal({
 
         {/* Actions */}
         <div className="flex gap-3 p-6 border-t border-orange-200/30 dark:border-orange-700/30">
-          <button
+          <Button
+            variant="outline"
             onClick={onClose}
-            className="px-6 py-3 rounded-xl border border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all duration-200"
+            className="border-orange-200 dark:border-orange-700 text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-900/20"
           >
             Cancel
-          </button>
+          </Button>
           
-          <button
+          <Button
             onClick={handleGeneratePDF}
             disabled={generating}
-            className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+            className="flex-1 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-semibold shadow-lg hover:shadow-xl"
           >
             {generating ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white" />
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
                 Generating...
               </>
             ) : (
               <>
-                <Download className="h-4 w-4" />
+                <Download className="h-4 w-4 mr-2" />
                 Generate PDF
               </>
             )}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

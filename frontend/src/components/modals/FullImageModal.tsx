@@ -1,10 +1,21 @@
-'use client'
-
 import { useState, useEffect } from 'react'
-import { X, Download, ExternalLink, Calendar, Globe } from 'lucide-react'
-import { Screenshot } from '@/types'
-import { apiClient } from '@/lib/api'
+import { X, Download, ExternalLink, Loader2 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+
+interface Screenshot {
+  id: string
+  _id: string
+  url: string
+  title?: string
+  metadata?: {
+    title?: string
+  }
+  status: string
+  createdAt: string
+  imageUrl?: string
+  thumbnailUrl?: string
+}
 
 interface FullImageModalProps {
   isOpen: boolean
@@ -13,48 +24,47 @@ interface FullImageModalProps {
   imageUrl?: string
 }
 
-export function FullImageModal({ isOpen, onClose, screenshot, imageUrl }: FullImageModalProps) {
+export const FullImageModal = ({ isOpen, onClose, screenshot, imageUrl }: FullImageModalProps) => {
+  const [fullImageUrl, setFullImageUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [fullImageUrl, setFullImageUrl] = useState<string>('')
+  const [error, setError] = useState(false)
 
   useEffect(() => {
-    if (isOpen && screenshot && !imageUrl) {
+    if (isOpen && screenshot) {
       loadFullImage()
-    } else if (imageUrl) {
-      setFullImageUrl(imageUrl)
+    } else {
+      setFullImageUrl(null)
+      setError(false)
     }
-  }, [isOpen, screenshot, imageUrl])
-
-  useEffect(() => {
-    // Cleanup blob URL when modal closes
-    return () => {
-      if (fullImageUrl && fullImageUrl.startsWith('blob:')) {
-        URL.revokeObjectURL(fullImageUrl)
-      }
-    }
-  }, [fullImageUrl])
+  }, [isOpen, screenshot])
 
   const loadFullImage = async () => {
-    if (!screenshot?._id) return
+    if (!screenshot) return
 
     try {
       setLoading(true)
-      const token = localStorage.getItem('token')
-      const response = await fetch(`/api/v1/images/${screenshot._id}?type=full`, {
+      setError(false)
+      
+      const screenshotId = screenshot._id || screenshot.id
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      
+      const response = await fetch(`${apiUrl}/images/${screenshotId}?type=full`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
-
+      
       if (response.ok) {
         const blob = await response.blob()
-        const blobUrl = URL.createObjectURL(blob)
-        setFullImageUrl(blobUrl)
+        const url = URL.createObjectURL(blob)
+        setFullImageUrl(url)
       } else {
+        setError(true)
         toast.error('Failed to load full image')
       }
     } catch (error) {
       console.error('Failed to load full image:', error)
+      setError(true)
       toast.error('Failed to load full image')
     } finally {
       setLoading(false)
@@ -62,12 +72,12 @@ export function FullImageModal({ isOpen, onClose, screenshot, imageUrl }: FullIm
   }
 
   const handleDownload = async () => {
-    if (!screenshot?._id || !fullImageUrl) return
+    if (!screenshot || !fullImageUrl) return
 
     try {
       const link = document.createElement('a')
       link.href = fullImageUrl
-      link.download = `${screenshot.title || 'screenshot'}.png`
+      link.download = `${screenshot.title || screenshot.metadata?.title || 'screenshot'}.png`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -84,107 +94,112 @@ export function FullImageModal({ isOpen, onClose, screenshot, imageUrl }: FullIm
     }
   }
 
-  if (!isOpen) return null
+  const handleClose = () => {
+    if (fullImageUrl) {
+      URL.revokeObjectURL(fullImageUrl)
+    }
+    onClose()
+  }
+
+  if (!isOpen || !screenshot) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Backdrop */}
-      <div 
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      
-      {/* Modal */}
-      <div className="relative z-10 max-w-7xl max-h-[90vh] w-full mx-4 bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl border border-orange-200/30 dark:border-orange-700/30 overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-60">
+      <div className="bg-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 w-full max-w-4xl max-h-[90vh] overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-orange-200/30 dark:border-orange-700/30">
+        <div className="flex items-center justify-between p-4 border-b border-white/10">
           <div className="flex-1 min-w-0">
-            <h2 className="text-xl font-semibold text-orange-900 dark:text-orange-100 truncate">
-              {screenshot?.title || 'Screenshot'}
+            <h2 className="text-lg font-semibold text-white truncate">
+              {screenshot.title || screenshot.metadata?.title || 'Screenshot'}
             </h2>
-            {screenshot?.url && (
-              <p className="text-sm text-orange-600 dark:text-orange-400 truncate mt-1">
-                {screenshot.url}
-              </p>
-            )}
+            <p className="text-sm text-white/60 truncate">
+              {screenshot.url}
+            </p>
           </div>
           
           <div className="flex items-center space-x-2 ml-4">
-            {screenshot?.url && (
-              <button
-                onClick={handleOpenOriginal}
-                className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-xl transition-colors"
-                title="Open original URL"
-              >
-                <ExternalLink className="h-5 w-5" />
-              </button>
-            )}
-            
-            <button
+            {/* Download */}
+            <Button
               onClick={handleDownload}
               disabled={!fullImageUrl}
-              className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-xl transition-colors disabled:opacity-50"
+              variant="ghost"
+              size="sm"
+              className="text-white/70 hover:text-white hover:bg-white/10"
               title="Download image"
             >
-              <Download className="h-5 w-5" />
-            </button>
+              <Download className="h-4 w-4" />
+            </Button>
             
-            <button
-              onClick={onClose}
-              className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-xl transition-colors"
+            {/* Open Original */}
+            <Button
+              onClick={handleOpenOriginal}
+              variant="ghost"
+              size="sm"
+              className="text-white/70 hover:text-white hover:bg-white/10"
+              title="Open original URL"
             >
-              <X className="h-5 w-5" />
-            </button>
+              <ExternalLink className="h-4 w-4" />
+            </Button>
+            
+            {/* Close */}
+            <Button
+              onClick={handleClose}
+              variant="ghost"
+              size="sm"
+              className="text-white/70 hover:text-white hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
         </div>
 
-        {/* Image Content */}
-        <div className="flex-1 overflow-auto p-6">
+        {/* Content */}
+        <div className="p-4 overflow-auto max-h-[calc(90vh-80px)]">
           {loading ? (
-            <div className="flex items-center justify-center h-96">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            <div className="flex items-center justify-center h-64">
+              <div className="flex flex-col items-center space-y-4">
+                <Loader2 className="h-8 w-8 animate-spin text-white/60" />
+                <p className="text-white/60">Loading full image...</p>
+              </div>
+            </div>
+          ) : error ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <p className="text-white/60 mb-4">Failed to load image</p>
+                <Button
+                  onClick={loadFullImage}
+                  variant="outline"
+                  className="border-white/20 text-white hover:bg-white/10"
+                >
+                  Try Again
+                </Button>
+              </div>
             </div>
           ) : fullImageUrl ? (
             <div className="flex justify-center">
               <img
                 src={fullImageUrl}
-                alt={screenshot?.title || 'Screenshot'}
-                className="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl"
+                alt={screenshot.title || screenshot.metadata?.title || 'Screenshot'}
+                className="max-w-full max-h-full object-contain rounded-lg"
+                style={{ maxHeight: 'calc(90vh - 160px)' }}
+              />
+            </div>
+          ) : imageUrl ? (
+            // Fallback to thumbnail while loading
+            <div className="flex justify-center">
+              <img
+                src={imageUrl}
+                alt={screenshot.title || screenshot.metadata?.title || 'Screenshot'}
+                className="max-w-full max-h-full object-contain rounded-lg opacity-50"
+                style={{ maxHeight: 'calc(90vh - 160px)' }}
               />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-96 text-orange-600 dark:text-orange-400">
-              <p>Failed to load image</p>
+            <div className="flex items-center justify-center h-64">
+              <p className="text-white/60">No image available</p>
             </div>
           )}
         </div>
-
-        {/* Footer with metadata */}
-        {screenshot && (
-          <div className="border-t border-orange-200/30 dark:border-orange-700/30 p-6 bg-orange-50/50 dark:bg-orange-900/20">
-            <div className="flex items-center justify-between text-sm text-orange-600 dark:text-orange-400">
-              <div className="flex items-center space-x-4">
-                {screenshot.createdAt && (
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>{new Date(screenshot.createdAt).toLocaleDateString()}</span>
-                  </div>
-                )}
-                
-                {screenshot.metadata?.viewport && (
-                  <div className="flex items-center space-x-2">
-                    <Globe className="h-4 w-4" />
-                    <span>{screenshot.metadata.viewport.width}×{screenshot.metadata.viewport.height}</span>
-                  </div>
-                )}
-              </div>
-              
-              {screenshot.metadata?.fileSize && (
-                <span className="font-medium">{(screenshot.metadata.fileSize / 1024 / 1024).toFixed(2)} MB</span>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   )

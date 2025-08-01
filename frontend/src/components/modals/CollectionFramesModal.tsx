@@ -1,65 +1,68 @@
-'use client'
-
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { X, Download, Eye, FileText, Grid, List } from 'lucide-react'
-import { Screenshot, Collection } from '@/types'
-import { FullImageModal } from './FullImageModal'
-import { PDFConfigModal } from './PDFConfigModal'
-// Removed useStableImageUrls import - using parent imageUrls instead
+import { useState, useCallback } from 'react'
+import { X, Download, Eye, Grid, List, Archive } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+
+interface Screenshot {
+  id: string
+  _id: string
+  url: string
+  title?: string
+  metadata?: {
+    title?: string
+  }
+  status: string
+  createdAt: string
+  updatedAt: string
+  imageUrl?: string
+  thumbnailUrl?: string
+}
+
+interface Collection {
+  id: string
+  name: string
+  screenshots?: Screenshot[]
+  frames?: Screenshot[]
+}
 
 interface CollectionFramesModalProps {
   isOpen: boolean
   onClose: () => void
-  collection: (Screenshot & { 
-    frames?: Screenshot[]
-    name?: string
-    collectionInfo?: {
-      id: string
-      name: string
-    }
-  }) | null
+  collection: Collection | null
   imageUrls: Record<string, string>
-  onGenerate?: (config: any, type: 'collection' | 'project', id?: string) => Promise<void>
-  token?: string
+  onViewImage?: (screenshot: Screenshot) => void
 }
 
-export function CollectionFramesModal({ 
+export const CollectionFramesModal = ({ 
   isOpen, 
   onClose, 
   collection, 
   imageUrls,
-  onGenerate,
-  token
-}: CollectionFramesModalProps) {
-  const [selectedFrame, setSelectedFrame] = useState<Screenshot | null>(null)
-  const [showFullImage, setShowFullImage] = useState(false)
-  const [showPDFConfig, setShowPDFConfig] = useState(false)
+  onViewImage
+}: CollectionFramesModalProps) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [downloading, setDownloading] = useState(false)
   
-  // Use the imageUrls passed from parent (which are stable from the main page)
   const getImageUrl = useCallback((screenshotId: string) => {
     return imageUrls[screenshotId] || null
   }, [imageUrls])
 
   const handleViewFrame = (frame: Screenshot) => {
-    setSelectedFrame(frame)
-    setShowFullImage(true)
+    if (onViewImage) {
+      onViewImage(frame)
+    }
   }
 
   const handleDownloadFrame = async (frame: Screenshot) => {
-    if (!frame._id) return
+    if (!frame._id && !frame.id) return
     
     try {
-      if (!token) {
-        toast.error('Authentication required')
-        return
-      }
+      const screenshotId = frame._id || frame.id
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/images/${frame._id}?type=full`, {
+      const response = await fetch(`${apiUrl}/images/${screenshotId}?type=full`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
       
@@ -68,7 +71,7 @@ export function CollectionFramesModal({
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = `${frame.title || 'screenshot'}.png`
+        link.download = `${frame.title || frame.metadata?.title || 'screenshot'}.png`
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -84,18 +87,15 @@ export function CollectionFramesModal({
   }
 
   const handleDownloadZip = async () => {
-    if (!collection?.frames?.length) return
+    if (!collection?.id) return
 
     try {
-      if (!token) {
-        toast.error('Authentication required')
-        return
-      }
-      
       setDownloading(true)
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/collections/${collection.id}/download`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1'
+      
+      const response = await fetch(`${apiUrl}/collections/${collection.id}/download`, {
         headers: {
-          'Authorization': `Bearer ${token}`
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         }
       })
 
@@ -104,7 +104,7 @@ export function CollectionFramesModal({
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
-        link.download = `${collection.name || collection.collectionInfo?.name || collection.title || 'collection'}.zip`
+        link.download = `${collection.name || 'collection'}.zip`
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
@@ -121,133 +121,143 @@ export function CollectionFramesModal({
     }
   }
 
-  const handleDownloadPDF = () => {
-    setShowPDFConfig(true)
-  }
-
   if (!isOpen || !collection) return null
 
+  const frames = collection.screenshots || collection.frames || []
+
   return (
-    <>
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-40">
-        <div className="bg-white/90 dark:bg-gray-800/90 backdrop-blur-xl rounded-2xl shadow-2xl border border-orange-200/30 dark:border-orange-700/30 w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-orange-200/30 dark:border-orange-700/30">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-amber-600 text-white">
-                <Grid className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-xl font-semibold text-orange-900 dark:text-orange-100 truncate">
-                  {collection.name || collection.collectionInfo?.name || collection.title || 'Collection'}
-                </h2>
-                <p className="text-sm text-orange-600 dark:text-orange-400">
-                  {collection.frames?.length || 0} screenshots
-                </p>
-              </div>
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="bg-white/10 backdrop-blur-2xl rounded-2xl shadow-2xl border border-white/20 w-full max-w-6xl max-h-[90vh] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-white/10">
+          <div className="flex items-center space-x-3">
+            <div className="p-2 rounded-lg bg-purple-500/20">
+              <Archive className="h-5 w-5 text-purple-400" />
             </div>
-            
-            <div className="flex items-center space-x-2 ml-4">
-              {/* View Mode Toggle */}
-              <div className="flex bg-orange-100/50 dark:bg-orange-900/20 rounded-xl p-1">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    viewMode === 'grid' 
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md' 
-                      : 'text-orange-700 dark:text-orange-300 hover:bg-orange-200/50 dark:hover:bg-orange-800/30'
-                  }`}
-                  title="Grid view"
-                >
-                  <Grid className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 rounded-lg transition-colors ${
-                    viewMode === 'list' 
-                      ? 'bg-gradient-to-r from-orange-500 to-amber-600 text-white shadow-md' 
-                      : 'text-orange-700 dark:text-orange-300 hover:bg-orange-200/50 dark:hover:bg-orange-800/30'
-                  }`}
-                  title="List view"
-                >
-                  <List className="h-4 w-4" />
-                </button>
-              </div>
-
-              {/* Download Buttons */}
-              <button
-                onClick={handleDownloadPDF}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
-                title="Download as PDF"
-              >
-                <FileText className="h-4 w-4" />
-                <span className="text-sm font-medium">PDF</span>
-              </button>
-
-              <button
-                onClick={handleDownloadZip}
-                disabled={downloading}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50"
-                title="Download as ZIP"
-              >
-                <Download className="h-4 w-4" />
-                <span className="text-sm font-medium">
-                  {downloading ? 'Downloading...' : 'ZIP'}
-                </span>
-              </button>
-              
-              <button
-                onClick={onClose}
-                className="p-2 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/20 rounded-xl transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+            <div>
+              <h2 className="text-xl font-semibold text-white">
+                {collection.name}
+              </h2>
+              <p className="text-sm text-white/60">
+                {frames.length} screenshots
+              </p>
             </div>
           </div>
+          
+          <div className="flex items-center space-x-2">
+            {/* View Mode Toggle */}
+            <div className="flex bg-white/5 rounded-lg p-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('grid')}
+                className={`h-8 w-8 p-0 ${viewMode === 'grid' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white'}`}
+              >
+                <Grid className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setViewMode('list')}
+                className={`h-8 w-8 p-0 ${viewMode === 'list' ? 'bg-white/10 text-white' : 'text-white/60 hover:text-white'}`}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Download ZIP */}
+            <Button
+              onClick={handleDownloadZip}
+              disabled={downloading}
+              className="bg-purple-500 hover:bg-purple-600 text-white"
+            >
+              {downloading ? (
+                <div className="flex items-center space-x-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span>Downloading...</span>
+                </div>
+              ) : (
+                <>
+                  <Download className="h-4 w-4 mr-2" />
+                  Download ZIP
+                </>
+              )}
+            </Button>
+            
+            {/* Close */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onClose}
+              className="h-8 w-8 p-0 text-white/60 hover:text-white hover:bg-white/10"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-auto p-6">
-            {!collection.frames?.length ? (
-              <div className="flex items-center justify-center h-64 text-orange-600 dark:text-orange-400">
-                <p>No screenshots in this collection</p>
-              </div>
-            ) : viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {collection.frames.map((frame) => (
+        {/* Content */}
+        <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+          {frames.length === 0 ? (
+            <div className="text-center py-12">
+              <Archive className="h-16 w-16 text-white/30 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-white mb-2">
+                No screenshots in this collection
+              </h3>
+              <p className="text-white/60">
+                This collection doesn't contain any screenshots yet.
+              </p>
+            </div>
+          ) : viewMode === 'grid' ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {frames.map((frame) => {
+                const frameId = frame._id || frame.id
+                const imageUrl = getImageUrl(frameId)
+                
+                return (
                   <div
-                    key={frame._id || frame.id}
-                    className="group relative bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm rounded-xl border border-orange-200/30 dark:border-orange-700/30 overflow-hidden hover:border-orange-500/50 hover:shadow-lg transition-all duration-200"
+                    key={frameId}
+                    className="group relative bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:border-purple-500/50 transition-all duration-200 overflow-hidden"
                   >
-                    {/* Image */}
-                    <div className="aspect-video bg-gray-800/50 relative overflow-hidden">
-                      {frame._id && getImageUrl(frame._id) ? (
+                    {/* Thumbnail */}
+                    <div className="aspect-video bg-gray-800/50 relative">
+                      {imageUrl ? (
                         <img
-                          src={getImageUrl(frame._id)!}
-                          alt={frame.title}
+                          src={imageUrl}
+                          alt={frame.title || frame.metadata?.title || 'Screenshot'}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-orange-500"></div>
+                          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-purple-500"></div>
                         </div>
                       )}
                       
-                      {/* Overlay */}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/50 transition-colors duration-200 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                        <button
+                      {/* Actions Overlay */}
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => handleViewFrame(frame)}
-                          className="p-2 bg-white/20 backdrop-blur-sm rounded-full text-white hover:bg-white/30 transition-colors"
-                          title="View full image"
+                          className="h-8 w-8 p-0 text-white hover:bg-white/20"
                         >
                           <Eye className="h-4 w-4" />
-                        </button>
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDownloadFrame(frame)}
+                          className="h-8 w-8 p-0 text-white hover:bg-white/20"
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
 
                     {/* Info */}
                     <div className="p-3">
                       <h3 className="text-sm font-medium text-white truncate">
-                        {frame.title || 'Untitled'}
+                        {frame.title || frame.metadata?.title || 'Untitled'}
                       </h3>
                       <p className="text-xs text-white/60 truncate mt-1">
                         {frame.url}
@@ -259,26 +269,31 @@ export function CollectionFramesModal({
                       )}
                     </div>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {collection.frames.map((frame) => (
+                )
+              })}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {frames.map((frame) => {
+                const frameId = frame._id || frame.id
+                const imageUrl = getImageUrl(frameId)
+                
+                return (
                   <div
-                    key={frame._id || frame.id}
-                    className="group flex items-center space-x-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:border-orange-500/50 transition-all duration-200"
+                    key={frameId}
+                    className="group flex items-center space-x-4 p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:border-purple-500/50 transition-all duration-200"
                   >
                     {/* Thumbnail */}
                     <div className="w-16 h-12 bg-gray-800/50 rounded overflow-hidden flex-shrink-0">
-                      {frame._id && getImageUrl(frame._id) ? (
+                      {imageUrl ? (
                         <img
-                          src={getImageUrl(frame._id)!}
-                          alt={frame.title}
+                          src={imageUrl}
+                          alt={frame.title || frame.metadata?.title || 'Screenshot'}
                           className="w-full h-full object-cover"
                         />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-orange-500"></div>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
                         </div>
                       )}
                     </div>
@@ -286,7 +301,7 @@ export function CollectionFramesModal({
                     {/* Info */}
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-medium text-white truncate">
-                        {frame.title || 'Untitled'}
+                        {frame.title || frame.metadata?.title || 'Untitled'}
                       </h3>
                       <p className="text-xs text-white/60 truncate">
                         {frame.url}
@@ -299,49 +314,31 @@ export function CollectionFramesModal({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100">
-                      <button
+                    <div className="flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleViewFrame(frame)}
-                        className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                        title="View full image"
+                        className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
                       >
                         <Eye className="h-4 w-4" />
-                      </button>
-                      <button
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => handleDownloadFrame(frame)}
-                        className="p-2 text-white/70 hover:text-white hover:bg-white/10 rounded-lg transition-colors"
-                        title="Download image"
+                        className="h-8 w-8 p-0 text-white/70 hover:text-white hover:bg-white/10"
                       >
                         <Download className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Full Image Modal */}
-      <FullImageModal
-        isOpen={showFullImage}
-        onClose={() => {
-          setShowFullImage(false)
-          setSelectedFrame(null)
-        }}
-        screenshot={selectedFrame}
-        imageUrl={selectedFrame?._id ? getImageUrl(selectedFrame._id) || undefined : undefined}
-      />
-
-      {/* PDF Config Modal */}
-      <PDFConfigModal
-        isOpen={showPDFConfig}
-        onClose={() => setShowPDFConfig(false)}
-        collection={collection as any}
-        type="collection"
-        onGenerate={onGenerate!}
-      />
-    </>
+    </div>
   )
 }

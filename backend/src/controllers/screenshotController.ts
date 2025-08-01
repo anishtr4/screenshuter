@@ -32,8 +32,9 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     throw createError('Invalid project ID format', 400);
   }
 
-  // Verify project ownership
-  const project = await Project.findOne({ _id: projectId, userId });
+  // Verify project ownership - super admins can access any project
+  const query = req.user.role === 'super_admin' ? { _id: projectId } : { _id: projectId, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }
@@ -211,8 +212,9 @@ export const createCrawlScreenshot = asyncHandler(async (req: Request, res: Resp
     throw createError('Invalid project ID format', 400);
   }
 
-  // Verify project ownership
-  const project = await Project.findOne({ _id: projectId, userId });
+  // Verify project ownership - super admins can access any project
+  const query = req.user.role === 'super_admin' ? { _id: projectId } : { _id: projectId, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }
@@ -273,13 +275,39 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
   const userId = req.user.id;
 
   // Verify collection exists and user owns the project
+  logger.info('Starting collection lookup', { collectionId, userId });
+  
   const collection = await Collection.findById(collectionId).populate('projectId');
   if (!collection) {
+    logger.error('Collection not found', { collectionId });
     throw createError('Collection not found', 404);
   }
 
+  logger.info('Collection found', { 
+    collectionId: collection._id,
+    projectId: collection.projectId,
+    hasProject: !!collection.projectId 
+  });
+
   const project = collection.projectId as any;
-  if (project.userId.toString() !== userId) {
+  
+  if (!project) {
+    logger.error('Project not found in collection', { collectionId });
+    throw createError('Project not found', 404);
+  }
+  
+  // Debug logging
+  logger.info('Access check debug', {
+    collectionId,
+    projectUserId: project.userId?.toString(),
+    currentUserId: userId,
+    userRole: req.user.role,
+    projectUserIdType: typeof project.userId,
+    currentUserIdType: typeof userId
+  });
+  
+  // Allow super admins to access any project's collections
+  if (req.user.role !== 'super_admin' && project.userId.toString() !== userId.toString()) {
     throw createError('Access denied', 403);
   }
 
@@ -446,8 +474,9 @@ export const getProjectScreenshots = asyncHandler(async (req: Request, res: Resp
     throw createError('Invalid project ID format', 400);
   }
 
-  // Verify project ownership
-  const project = await Project.findOne({ _id: projectId, userId });
+  // Verify project ownership - super admins can access any project
+  const query = req.user.role === 'super_admin' ? { _id: projectId } : { _id: projectId, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }
@@ -494,8 +523,9 @@ export const getProjectCollections = asyncHandler(async (req: Request, res: Resp
     throw createError('Invalid project ID format', 400);
   }
 
-  // Verify project ownership
-  const project = await Project.findOne({ _id: projectId, userId });
+  // Verify project ownership - super admins can access any project
+  const query = req.user.role === 'super_admin' ? { _id: projectId } : { _id: projectId, userId };
+  const project = await Project.findOne(query);
   if (!project) {
     throw createError('Project not found', 404);
   }
