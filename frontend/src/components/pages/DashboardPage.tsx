@@ -53,17 +53,37 @@ export function DashboardPage() {
     <DashboardLayout title={`Welcome back, ${user?.email?.split('@')[0] || 'User'}!`} subtitle="Manage your projects and screenshots">
       <div className="space-y-8">
 
-        {/* Projects Grid */}
+        {/* Stunning Projects Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="h-48 bg-gray-200 dark:bg-gray-700 rounded-xl"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="group">
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/80 to-slate-50/60 dark:from-slate-800/80 dark:to-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-xl h-64">
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer"></div>
+                  
+                  {/* Loading content */}
+                  <div className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 bg-gradient-to-br from-orange-200 to-amber-300 dark:from-orange-600 dark:to-amber-700 rounded-2xl animate-pulse"></div>
+                      <div className="w-6 h-6 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="w-3/4 h-5 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      <div className="w-2/3 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                    </div>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="w-16 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      <div className="w-12 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {projects.map((project) => (
               <Link key={project.id} to={`/projects/${project.id}`}>
                 <GlassCard className="group hover:scale-105 transition-transform duration-200 cursor-pointer">

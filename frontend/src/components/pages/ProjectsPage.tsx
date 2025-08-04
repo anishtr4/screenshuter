@@ -154,96 +154,127 @@ const ProjectsPage = () => {
           </Button>
         </div>
 
-        {/* Projects Grid */}
+        {/* Stunning Projects Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="rounded-2xl bg-slate-200 dark:bg-slate-700 h-64"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="group">
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/80 to-slate-50/60 dark:from-slate-800/80 dark:to-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-xl h-72">
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer"></div>
+                  
+                  {/* Loading content */}
+                  <div className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-600 dark:to-slate-700 rounded-xl animate-pulse"></div>
+                      <div className="w-16 h-6 bg-slate-200 dark:bg-slate-700 rounded-full animate-pulse"></div>
+                    </div>
+                    <div className="space-y-3">
+                      <div className="w-3/4 h-6 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      <div className="w-2/3 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                    </div>
+                    <div className="flex items-center justify-between pt-4">
+                      <div className="flex space-x-4">
+                        <div className="w-12 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                        <div className="w-12 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      </div>
+                      <div className="w-16 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {projects.map((project, index) => (
               <div
                 key={project.id}
-                className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.02]"
+                className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/90 via-white/80 to-slate-50/70 dark:from-slate-800/90 dark:via-slate-800/80 dark:to-slate-900/70 backdrop-blur-xl shadow-2xl border border-white/50 dark:border-slate-600/50 hover:shadow-3xl transition-all duration-500 hover:scale-[1.03] hover:-translate-y-1"
               >
-                {/* Background Pattern */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+                {/* Stunning Background Effects */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-purple-500/5"></div>
+                <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-400/20 via-indigo-400/10 to-transparent rounded-full blur-2xl group-hover:blur-3xl transition-all duration-500"></div>
+                <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-gradient-to-tr from-purple-400/15 via-pink-400/10 to-transparent rounded-full blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                 
-                <div className="relative p-6">
-                  {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
-                    <div className={`p-3 rounded-xl bg-gradient-to-r ${getProjectColor(index)} shadow-lg group-hover:scale-110 transition-transform duration-300`}>
-                      <FolderOpen className="h-6 w-6 text-white" />
+                {/* Hover shimmer effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 rounded-3xl"></div>
+                </div>
+                
+                <div className="relative p-7">
+                  {/* Enhanced Header */}
+                  <div className="flex items-start justify-between mb-5">
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all duration-500"></div>
+                      <div className={`relative p-3.5 rounded-2xl bg-gradient-to-br ${getProjectColor(index)} shadow-xl group-hover:scale-110 group-hover:rotate-3 transition-all duration-500`}>
+                        <FolderOpen className="h-7 w-7 text-white drop-shadow-sm" />
+                      </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                      <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                        active
+                      <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-gradient-to-r from-emerald-100 to-green-100 text-emerald-700 dark:from-emerald-900/40 dark:to-green-900/40 dark:text-emerald-300 border border-emerald-200/50 dark:border-emerald-700/50 shadow-sm">
+                        ✨ Active
                       </span>
                     </div>
                   </div>
 
-                  {/* Content */}
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100 line-clamp-1">
+                  {/* Enhanced Content */}
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-xl text-slate-900 dark:text-slate-100 line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors duration-300">
                       {project.name}
                     </h3>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
-                      {project.description || 'No description provided'}
+                    <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                      {project.description || 'No description provided for this project'}
                     </p>
                     
-                    {/* Stats */}
-                    <div className="space-y-2 pt-2">
+                    {/* Enhanced Stats */}
+                    <div className="space-y-3 pt-3">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-400">
-                          <Camera className="h-4 w-4 text-blue-500" />
-                          <span>{project.screenshotCount || 0} screenshots</span>
+                        <div className="flex items-center space-x-2 px-3 py-2 rounded-xl bg-blue-50/80 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30">
+                          <Camera className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          <span className="text-sm font-semibold text-blue-700 dark:text-blue-300">{project.screenshotCount || 0}</span>
+                          <span className="text-xs text-blue-600/80 dark:text-blue-400/80">shots</span>
                         </div>
-                        <div className="flex items-center space-x-1 text-xs text-slate-500 dark:text-slate-500">
-                          <Clock className="h-3 w-3 text-blue-500" />
-                          <span>{formatDate(project.updatedAt)}</span>
+                        <div className="flex items-center space-x-2 text-xs text-slate-500 dark:text-slate-400">
+                          <Clock className="h-3 w-3 text-indigo-500" />
+                          <span className="font-medium">{formatDate(project.updatedAt)}</span>
                         </div>
                       </div>
                       {project.user && (
-                        <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                          <Users className="h-3 w-3" />
-                          <span>Created by {project.user.name}</span>
+                        <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-50/80 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                          <Users className="h-3 w-3 text-slate-500 dark:text-slate-400" />
+                          <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">by {project.user.name}</span>
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center space-x-2 mt-6 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  {/* Stunning Action Buttons */}
+                  <div className="flex items-center space-x-2 mt-6 transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
                     <Button 
                       size="sm" 
-                      variant="outline" 
-                      className="flex-1 border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200"
+                      className="flex-1 bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 rounded-xl font-semibold"
                       onClick={() => navigate(`/projects/${project.id}`)}
                     >
-                      <Eye className="h-3 w-3 mr-1" />
-                      View
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Project
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="flex-1 border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-200"
+                      className="border-slate-200/60 hover:border-slate-300 bg-white/80 hover:bg-white dark:border-slate-600/60 dark:hover:border-slate-500 dark:bg-slate-800/80 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 transition-all duration-300 transform hover:scale-105 rounded-xl backdrop-blur-sm shadow-sm hover:shadow-md"
                       onClick={() => handleEditProject(project)}
                     >
-                      <Edit className="h-3 w-3 mr-1" />
-                      Edit
+                      <Edit className="h-4 w-4" />
                     </Button>
                     <Button 
                       size="sm" 
                       variant="outline" 
-                      className="border-red-200 hover:bg-red-50 text-red-600 dark:border-red-800 dark:hover:bg-red-900/20 dark:text-red-400 transition-all duration-200"
+                      className="border-red-200/60 hover:border-red-300 bg-red-50/80 hover:bg-red-100 text-red-600 dark:border-red-700/60 dark:hover:border-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/30 dark:text-red-400 transition-all duration-300 transform hover:scale-105 rounded-xl backdrop-blur-sm shadow-sm hover:shadow-md"
                       onClick={() => handleDeleteProject(project)}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>

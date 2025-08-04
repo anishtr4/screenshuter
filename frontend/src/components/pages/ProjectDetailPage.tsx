@@ -819,7 +819,7 @@ const ProjectDetailPage: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
             {/* Show processing collections FIRST - at the beginning of the grid */}
             {Object.values(collectionProgress)
               .filter(progress => progress.progress < 100)
@@ -832,35 +832,51 @@ const ProjectDetailPage: React.FC = () => {
               .map((progress) => (
                 <div
                   key={progress.collectionId}
-                  className="group relative overflow-hidden rounded-2xl bg-purple-50 dark:bg-purple-900/20 backdrop-blur-2xl shadow-xl border border-purple-200 dark:border-purple-800 hover:shadow-2xl transition-all duration-300"
+                  className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50/90 via-indigo-50/80 to-blue-50/70 dark:from-purple-900/30 dark:via-indigo-900/25 dark:to-blue-900/20 backdrop-blur-xl shadow-2xl border border-purple-200/60 dark:border-purple-700/60 hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1"
                 >
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-100/20 to-transparent"></div>
+                  {/* Stunning Background Effects */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-blue-500/10"></div>
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-purple-400/30 via-indigo-400/20 to-transparent rounded-full blur-2xl animate-pulse"></div>
+                  <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-tr from-blue-400/25 via-purple-400/15 to-transparent rounded-full blur-xl animate-pulse" style={{animationDelay: '1s'}}></div>
                   
-                  {/* Progress Badge */}
+                  {/* Enhanced Progress Badge */}
                   <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-full text-xs font-medium">
-                      <div className="flex items-center space-x-1">
-                        <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
-                        <span>{progress.progress || 0}% - {progress.stage || 'Processing'}</span>
+                    <div className="bg-gradient-to-r from-purple-100/90 to-indigo-100/90 dark:from-purple-800/80 dark:to-indigo-800/80 text-purple-700 dark:text-purple-300 px-3 py-2 rounded-2xl text-xs font-bold backdrop-blur-sm border border-purple-200/50 dark:border-purple-600/50 shadow-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-300 dark:border-purple-500 border-t-purple-600 dark:border-t-purple-300"></div>
+                          <div className="absolute inset-0 rounded-full bg-purple-400/20 animate-ping"></div>
+                        </div>
+                        <span>{progress.progress || 0}%</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Processing Preview */}
-                  <div className="relative h-48 bg-purple-100 dark:bg-purple-800 rounded-t-2xl overflow-hidden flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-300 border-t-purple-600 mx-auto mb-4"></div>
-                      <p className="text-purple-700 dark:text-purple-300 font-medium">
-                        {progress.type === 'crawl' ? 'Crawling in Progress...' : 
-                         progress.type === 'frame' ? 'Processing Frame Collection...' : 
-                         progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? 'Crawling in Progress...' :
-                         progress.stage?.includes('frame') || progress.stage?.includes('Frame') || progress.stage?.includes('captures') ? 'Processing Frame Collection...' :
-                         'Processing Collection...'}
+                  {/* Stunning Processing Preview */}
+                  <div className="relative h-52 bg-gradient-to-br from-purple-100/80 via-indigo-100/60 to-blue-100/40 dark:from-purple-800/60 dark:via-indigo-800/50 dark:to-blue-800/40 rounded-t-3xl overflow-hidden flex items-center justify-center">
+                    {/* Animated background pattern */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-4 left-4 w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                      <div className="absolute top-8 right-8 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
+                      <div className="absolute bottom-6 left-8 w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
+                      <div className="absolute bottom-4 right-6 w-2.5 h-2.5 bg-purple-300 rounded-full animate-bounce" style={{animationDelay: '1.5s'}}></div>
+                    </div>
+                    
+                    <div className="text-center relative z-10">
+                      <div className="relative mb-4">
+                        <div className="animate-spin rounded-full h-20 w-20 border-4 border-purple-300/50 dark:border-purple-500/50 border-t-purple-600 dark:border-t-purple-300 mx-auto shadow-lg"></div>
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400/20 to-indigo-400/20 animate-ping"></div>
+                      </div>
+                      <p className="text-purple-800 dark:text-purple-200 font-bold text-lg">
+                        {progress.type === 'crawl' ? '🔍 Crawling in Progress' : 
+                         progress.type === 'frame' ? '🎬 Processing Frames' : 
+                         progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? '🔍 Crawling in Progress' :
+                         progress.stage?.includes('frame') || progress.stage?.includes('Frame') || progress.stage?.includes('captures') ? '🎬 Processing Frames' :
+                         '⚡ Processing Collection'}
                       </p>
-                      <p className="text-purple-600 dark:text-purple-400 text-sm mt-1">{progress.stage || 'Processing...'}</p>
+                      <p className="text-purple-600 dark:text-purple-300 text-sm mt-2 font-medium">{progress.stage || 'Processing...'}</p>
                       {progress.url && (
-                        <p className="text-purple-500 dark:text-purple-400 text-xs mt-1 truncate">
+                        <p className="text-purple-500 dark:text-purple-400 text-xs mt-2 truncate px-4 py-1 bg-white/50 dark:bg-slate-800/50 rounded-lg backdrop-blur-sm">
                           {progress.url}
                         </p>
                       )}

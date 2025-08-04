@@ -68,101 +68,146 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         "fixed inset-y-0 left-0 z-30 w-72 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="flex h-full flex-col backdrop-blur-2xl bg-white/80 dark:bg-slate-900/90 border-r border-slate-200/50 dark:border-slate-700/50 shadow-2xl">
-          {/* Professional Logo Section */}
-          <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200/30 dark:border-slate-700/30">
-            <Link to="/dashboard" className="flex items-center space-x-4 group">
-              <div className="relative">
-                <Zap className="h-10 w-10 text-blue-600 dark:text-blue-400 group-hover:text-blue-700 dark:group-hover:text-blue-300 transition-all duration-300 group-hover:scale-110 drop-shadow-lg" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 dark:from-slate-100 dark:to-slate-300 bg-clip-text text-transparent">
-                  ScreenShot
-                </span>
-                <span className="text-xs text-slate-600 dark:text-slate-400 font-medium">
-                  SaaS Platform
-                </span>
-              </div>
-            </Link>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="lg:hidden hover:bg-slate-100/20 dark:hover:bg-slate-800/50 rounded-xl p-2"
-              onClick={() => setSidebarOpen(false)}
-            >
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
+        <div className="flex h-full flex-col relative overflow-hidden">
+          {/* Stunning Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/95 via-white/90 to-blue-50/80 dark:from-slate-900/95 dark:via-slate-800/90 dark:to-indigo-950/80 backdrop-blur-3xl"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.08),transparent_50%)] dark:bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.12),transparent_50%)]"></div>
+          
+          {/* Border and Shadow */}
+          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-slate-200/60 to-transparent dark:via-slate-700/60"></div>
+          <div className="absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-black/5 to-transparent dark:from-black/20"></div>
+          
+          <div className="relative z-10 flex h-full flex-col">
+            {/* Elegant Logo Section */}
+            <div className="flex h-20 items-center justify-between px-6 border-b border-slate-200/20 dark:border-slate-700/20">
+              <Link to="/dashboard" className="flex items-center space-x-4 group">
+                <div className="relative">
+                  <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-indigo-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all duration-500"></div>
+                  <div className="relative bg-gradient-to-r from-blue-600 to-indigo-600 p-2.5 rounded-xl shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
+                    <Zap className="h-6 w-6 text-white drop-shadow-sm" />
+                  </div>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold bg-gradient-to-r from-slate-900 via-blue-900 to-indigo-900 dark:from-slate-100 dark:via-blue-100 dark:to-indigo-100 bg-clip-text text-transparent">
+                    ScreenShot
+                  </span>
+                  <span className="text-xs text-slate-500 dark:text-slate-400 font-medium tracking-wide">
+                    Professional Platform
+                  </span>
+                </div>
+              </Link>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden hover:bg-white/20 dark:hover:bg-slate-800/50 rounded-xl p-2 backdrop-blur-sm"
+                onClick={() => setSidebarOpen(false)}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
 
-          {/* Professional Compact Navigation */}
-          <nav className="flex-1 space-y-0.5 p-4 overflow-y-auto">
+            {/* Stunning Professional Navigation */}
+            <nav className="flex-1 space-y-1 p-6 overflow-y-auto">
             {sidebarItems.map((item, index) => {
               const isActive = location.pathname === item.href
               const Icon = item.icon
               
               return (
-                <div key={item.href}>
+                <div key={item.href} className="relative">
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-2.5 rounded-lg transition-all duration-300 group relative overflow-hidden hover:scale-[1.02] hover:-translate-y-0.5",
+                      "flex items-center space-x-4 px-4 py-3.5 rounded-2xl transition-all duration-500 group relative overflow-hidden",
                       isActive
-                        ? "backdrop-blur-2xl bg-gradient-to-r from-blue-500/15 to-indigo-500/15 dark:from-blue-600/20 dark:to-indigo-600/20 border border-blue-200/40 dark:border-blue-600/40 shadow-lg hover:shadow-xl text-blue-900 dark:text-blue-100 font-semibold"
-                        : "hover:backdrop-blur-2xl hover:bg-slate-100/70 dark:hover:bg-slate-800/70 hover:border hover:border-slate-200/40 dark:hover:border-slate-700/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-slate-100 hover:shadow-md"
+                        ? "bg-gradient-to-r from-white/90 to-white/70 dark:from-slate-800/90 dark:to-slate-700/70 backdrop-blur-xl border border-white/40 dark:border-slate-600/40 shadow-xl text-slate-900 dark:text-white font-semibold transform scale-[1.02]"
+                        : "hover:bg-white/60 dark:hover:bg-slate-800/60 hover:backdrop-blur-xl hover:border hover:border-white/30 dark:hover:border-slate-700/30 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:shadow-lg hover:transform hover:scale-[1.01] hover:-translate-y-0.5"
                     )}
                   >
+                    {/* Active indicator glow */}
                     {isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/5 to-indigo-500/5 dark:from-blue-600/10 dark:to-indigo-600/10 rounded-lg"></div>
+                      <>
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-purple-500/10 rounded-2xl"></div>
+                        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-blue-500 to-indigo-600 rounded-r-full shadow-lg"></div>
+                      </>
                     )}
+                    
+                    {/* Icon container */}
                     <div className={cn(
-                      "relative p-1.5 rounded-md transition-all duration-300 group-hover:scale-110",
+                      "relative p-2.5 rounded-xl transition-all duration-500 group-hover:scale-110",
                       isActive 
-                        ? "bg-gradient-to-r from-blue-500/20 to-indigo-500/20 shadow-md" 
-                        : "group-hover:bg-slate-200/40 dark:group-hover:bg-slate-700/40"
+                        ? "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg" 
+                        : "bg-slate-100/80 dark:bg-slate-700/80 group-hover:bg-gradient-to-br group-hover:from-blue-500/20 group-hover:to-indigo-500/20 group-hover:shadow-md"
                     )}>
-                      <Icon className={cn("h-4 w-4 transition-all duration-300", 
-                        isActive ? "text-blue-600 dark:text-blue-400" : "text-slate-600 dark:text-slate-400 group-hover:text-blue-500"
+                      <Icon className={cn("h-5 w-5 transition-all duration-500", 
+                        isActive ? "text-white drop-shadow-sm" : "text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                       )} />
+                      
+                      {/* Icon glow effect */}
+                      {isActive && (
+                        <div className="absolute inset-0 bg-gradient-to-br from-blue-400/30 to-indigo-500/30 rounded-xl blur-sm"></div>
+                      )}
                     </div>
-                    <span className="relative font-medium text-sm transition-all duration-300">
+                    
+                    {/* Label */}
+                    <span className="relative font-semibold text-sm tracking-wide transition-all duration-300">
                       {item.label}
                     </span>
+                    
+                    {/* Active pulse indicator */}
                     {isActive && (
-                      <div className="absolute right-2 w-1.5 h-1.5 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full shadow-md animate-pulse"></div>
+                      <div className="absolute right-4 w-2 h-2 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full shadow-lg animate-pulse"></div>
                     )}
+                    
+                    {/* Hover shimmer effect */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                    </div>
                   </Link>
-                  {/* Visible separator between items */}
+                  
+                  {/* Elegant separator */}
                   {index < sidebarItems.length - 1 && (
-                    <div className="mx-3 my-1 h-px bg-gradient-to-r from-transparent via-slate-200/60 to-transparent dark:via-slate-700/60"></div>
+                    <div className="mx-6 my-2 h-px bg-gradient-to-r from-transparent via-slate-200/40 to-transparent dark:via-slate-600/40"></div>
                   )}
                 </div>
               )
             })}
           </nav>
 
-          {/* Professional User Profile Section */}
-          <div className="border-t border-slate-200/30 dark:border-slate-700/30 p-6">
+          {/* Stunning User Profile Section */}
+          <div className="border-t border-white/20 dark:border-slate-600/20 p-6">
             <Popover>
               <PopoverTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  className="w-full flex items-center justify-start space-x-4 px-4 py-4 rounded-xl transition-all duration-300 backdrop-blur-2xl bg-slate-100/40 hover:bg-slate-100/60 dark:bg-slate-800/40 dark:hover:bg-slate-800/60 border border-slate-200/30 hover:border-slate-300/40 dark:border-slate-700/30 dark:hover:border-slate-600/40 shadow-lg hover:shadow-xl text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-100 font-medium text-base min-h-[64px] overflow-hidden group"
+                  className="w-full flex items-center justify-start space-x-4 px-5 py-4 rounded-2xl transition-all duration-500 bg-gradient-to-r from-white/80 to-white/60 dark:from-slate-800/80 dark:to-slate-700/60 hover:from-white/90 hover:to-white/80 dark:hover:from-slate-700/90 dark:hover:to-slate-600/80 backdrop-blur-xl border border-white/40 hover:border-white/60 dark:border-slate-600/40 dark:hover:border-slate-500/60 shadow-xl hover:shadow-2xl text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-100 font-medium text-base min-h-[72px] overflow-hidden group transform hover:scale-[1.02] hover:-translate-y-0.5"
                 >
                   <div className="relative">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                      <span className="text-white font-bold text-sm">
-                        {user?.name?.charAt(0)?.toUpperCase() || 'U'}
-                      </span>
+                    {/* Avatar with stunning effects */}
+                    <div className="relative">
+                      <div className="absolute inset-0 bg-gradient-to-r from-blue-500/30 to-indigo-600/30 rounded-full blur-lg group-hover:blur-xl transition-all duration-500"></div>
+                      <div className="relative w-12 h-12 bg-gradient-to-br from-blue-500 via-indigo-600 to-purple-600 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110">
+                        <span className="text-white font-bold text-lg drop-shadow-sm">
+                          {user?.name?.charAt(0)?.toUpperCase() || 'U'}
+                        </span>
+                        {/* Inner glow */}
+                        <div className="absolute inset-1 bg-gradient-to-br from-white/20 to-transparent rounded-full"></div>
+                      </div>
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-emerald-500 rounded-full border-2 border-white dark:border-slate-900 shadow-lg"></div>
+                    {/* Online status indicator */}
+                    <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full border-2 border-white dark:border-slate-800 shadow-lg animate-pulse"></div>
                   </div>
                   <div className="flex-1 text-left min-w-0">
-                    <div className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                    <div className="font-bold text-slate-900 dark:text-slate-100 truncate text-base">
                       {user?.name || 'User'}
                     </div>
-                    <div className="text-sm text-slate-600 dark:text-slate-400 truncate">
+                    <div className="text-sm text-slate-600 dark:text-slate-400 truncate font-medium">
                       {user?.email || 'user@example.com'}
                     </div>
+                  </div>
+                  {/* Hover shimmer effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 rounded-2xl"></div>
                   </div>
                 </Button>
               </PopoverTrigger>
@@ -210,6 +255,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                 </div>
               </PopoverContent>
             </Popover>
+          </div>
           </div>
         </div>
       </div>
