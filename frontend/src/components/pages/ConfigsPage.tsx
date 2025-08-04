@@ -268,30 +268,30 @@ export function ConfigsPage() {
 
         {/* Enhanced Config Sections */}
         {loading ? (
-          <div className="grid gap-8">
+          <div className="grid gap-6">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="group">
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/80 to-slate-50/60 dark:from-slate-800/80 dark:to-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-xl p-8">
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/80 to-slate-50/60 dark:from-slate-800/80 dark:to-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-xl p-6">
                   {/* Shimmer effect */}
                   <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer"></div>
                   
-                  <div className="flex items-start space-x-6 mb-8">
-                    <div className="w-14 h-14 bg-gradient-to-br from-blue-200 to-indigo-300 dark:from-blue-600 dark:to-indigo-700 rounded-2xl animate-pulse"></div>
-                    <div className="flex-1 space-y-3">
-                      <div className="w-1/3 h-6 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
-                      <div className="w-2/3 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                  <div className="flex items-start space-x-4 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-indigo-300 dark:from-blue-600 dark:to-indigo-700 rounded-xl animate-pulse"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="w-1/3 h-5 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      <div className="w-2/3 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
                     </div>
                   </div>
                   
-                  <div className="space-y-6">
+                  <div className="space-y-4">
                     {[...Array(2)].map((_, j) => (
-                      <div key={j} className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6 rounded-2xl bg-white/50 dark:bg-slate-800/50">
-                        <div className="space-y-2">
-                          <div className="w-24 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
-                          <div className="w-32 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      <div key={j} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-white/50 dark:bg-slate-800/50">
+                        <div className="space-y-1">
+                          <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                          <div className="w-28 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
                         </div>
-                        <div className="w-full h-12 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
-                        <div className="w-20 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-16 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
                       </div>
                     ))}
                   </div>
@@ -300,7 +300,7 @@ export function ConfigsPage() {
             ))}
           </div>
         ) : (
-          <div className="grid gap-8">
+          <div className="grid gap-6">
             {configs.map((section) => {
               const Icon = section.icon
               return (
@@ -315,26 +315,26 @@ export function ConfigsPage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 rounded-3xl"></div>
                   </div>
                   
-                  <div className="relative p-8">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                        <Icon className="h-6 w-6 text-white" />
+                  <div className="relative p-6">
+                    <div className="flex items-center space-x-3 mb-5">
+                      <div className="p-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                           {section.title}
                         </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                           {section.description}
                         </p>
                       </div>
                     </div>
                     
-                    <div className="grid gap-6">
+                    <div className="grid gap-4">
                       {section.settings.map((setting) => (
-                        <div key={setting.key} className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start p-6 rounded-2xl bg-gradient-to-r from-white/60 to-white/40 dark:from-slate-700/60 dark:to-slate-800/40 backdrop-blur-sm border border-white/30 dark:border-slate-600/30 hover:border-white/50 dark:hover:border-slate-500/50 transition-all duration-300 hover:shadow-lg">
-                          <div className="space-y-2">
-                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300">
+                        <div key={setting.key} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start p-4 rounded-xl bg-gradient-to-r from-white/60 to-white/40 dark:from-slate-700/60 dark:to-slate-800/40 backdrop-blur-sm border border-white/30 dark:border-slate-600/30 hover:border-white/50 dark:hover:border-slate-500/50 transition-all duration-300 hover:shadow-lg">
+                          <div className="space-y-1">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                               {setting.label}
                             </label>
                             {setting.description && (

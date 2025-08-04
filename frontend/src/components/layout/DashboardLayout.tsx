@@ -46,21 +46,27 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
 
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/50 dark:from-slate-900 dark:via-slate-800 dark:to-indigo-900/30 relative overflow-hidden flex">
-      {/* Professional Background Animations */}
+      {/* Enhanced Animated Background for Glassmorphism */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        {/* Subtle Gradient Orbs */}
-        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-bl from-blue-100/20 via-transparent to-transparent rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-indigo-100/20 via-transparent to-transparent rounded-full blur-3xl animate-pulse" style={{animationDelay: '4s'}}></div>
-        <div className="absolute top-1/3 right-1/3 w-96 h-96 bg-gradient-to-r from-purple-100/15 to-blue-100/15 rounded-full blur-2xl animate-pulse" style={{animationDelay: '8s'}}></div>
+        {/* Dynamic Gradient Orbs */}
+        <div className="absolute -top-1/2 -right-1/2 w-full h-full bg-gradient-to-bl from-blue-200/25 via-indigo-100/15 to-transparent rounded-full blur-3xl animate-pulse dark:from-blue-500/20 dark:via-indigo-400/10"></div>
+        <div className="absolute -bottom-1/2 -left-1/2 w-full h-full bg-gradient-to-tr from-indigo-200/25 via-purple-100/15 to-transparent rounded-full blur-3xl animate-pulse dark:from-indigo-500/20 dark:via-purple-400/10" style={{animationDelay: '4s'}}></div>
+        <div className="absolute top-1/3 right-1/3 w-96 h-96 bg-gradient-to-r from-purple-200/20 via-blue-100/15 to-indigo-100/15 rounded-full blur-2xl animate-pulse dark:from-purple-500/15 dark:via-blue-400/10 dark:to-indigo-400/10" style={{animationDelay: '8s'}}></div>
+        <div className="absolute top-1/4 left-1/4 w-80 h-80 bg-gradient-to-br from-pink-200/15 via-transparent to-blue-200/15 rounded-full blur-2xl animate-pulse dark:from-pink-500/12 dark:to-blue-500/12" style={{animationDelay: '12s'}}></div>
         
-        {/* Professional Floating Elements */}
-        <div className="absolute top-20 right-20 w-2 h-2 bg-blue-400/30 rounded-full animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/4 left-20 w-1.5 h-1.5 bg-indigo-400/25 rounded-full animate-pulse" style={{animationDelay: '3s'}}></div>
-        <div className="absolute bottom-1/3 right-1/4 w-2.5 h-2.5 bg-purple-400/20 rounded-full animate-pulse" style={{animationDelay: '6s'}}></div>
-        <div className="absolute bottom-20 left-1/3 w-1 h-1 bg-blue-300/35 rounded-full animate-pulse" style={{animationDelay: '2s'}}></div>
+        {/* Moving Gradient Waves */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-100/8 to-transparent animate-pulse dark:via-blue-400/5" style={{animationDelay: '2s'}}></div>
+        <div className="absolute inset-0 bg-gradient-to-l from-transparent via-indigo-100/6 to-transparent animate-pulse dark:via-indigo-400/4" style={{animationDelay: '6s'}}></div>
         
-        {/* Grid Pattern Overlay */}
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.03)_1px,transparent_1px)] bg-[size:20px_20px] [mask-image:radial-gradient(ellipse_80%_50%_at_50%_0%,#000_70%,transparent_110%)]"></div>
+        {/* Enhanced Floating Elements */}
+        <div className="absolute top-20 right-20 w-3 h-3 bg-blue-400/40 rounded-full animate-pulse shadow-lg dark:bg-blue-300/30" style={{animationDelay: '1s'}}></div>
+        <div className="absolute top-1/4 left-20 w-2 h-2 bg-indigo-400/35 rounded-full animate-pulse shadow-md dark:bg-indigo-300/25" style={{animationDelay: '3s'}}></div>
+        <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-purple-400/30 rounded-full animate-pulse shadow-lg dark:bg-purple-300/20" style={{animationDelay: '6s'}}></div>
+        <div className="absolute bottom-20 left-1/3 w-2.5 h-2.5 bg-blue-300/45 rounded-full animate-pulse shadow-md dark:bg-blue-200/30" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-1/2 right-1/2 w-1.5 h-1.5 bg-pink-400/25 rounded-full animate-pulse shadow-sm dark:bg-pink-300/15" style={{animationDelay: '10s'}}></div>
+        
+        {/* Enhanced Grid Pattern */}
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(59,130,246,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(59,130,246,0.04)_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_80%_60%_at_50%_0%,#000_70%,transparent_110%)] dark:bg-[linear-gradient(rgba(99,102,241,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(99,102,241,0.03)_1px,transparent_1px)]"></div>
       </div>
 
       {/* Enhanced Sidebar */}
@@ -68,7 +74,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         "fixed inset-y-0 left-0 z-30 w-72 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0",
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="flex h-full flex-col relative overflow-hidden">
+        <div className="flex h-full flex-col relative overflow-hidden shadow-2xl shadow-black/20 dark:shadow-black/40">
           {/* Ultra Glassmorphism Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-slate-50/40 to-blue-50/35 dark:from-slate-900/40 dark:via-slate-800/50 dark:to-indigo-950/45 backdrop-blur-[40px]"></div>
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(59,130,246,0.15),transparent_40%)] dark:bg-[radial-gradient(circle_at_25%_15%,rgba(59,130,246,0.25),transparent_40%)]"></div>
@@ -77,8 +83,12 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
           
           {/* Enhanced Border and Shadow Effects */}
           <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/80 to-transparent dark:via-slate-600/80"></div>
-          <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white/10 via-transparent to-transparent dark:from-black/30"></div>
+          <div className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-white/15 via-white/5 to-transparent dark:from-black/40 dark:via-black/10"></div>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-white/10 dark:via-slate-800/10 dark:to-slate-700/15"></div>
+          
+          {/* Enhanced Shadow Layers */}
+          <div className="absolute -right-4 inset-y-0 w-4 bg-gradient-to-l from-black/10 to-transparent dark:from-black/25"></div>
+          <div className="absolute -right-8 inset-y-0 w-8 bg-gradient-to-l from-black/5 to-transparent dark:from-black/15"></div>
           
           <div className="relative z-10 flex h-full flex-col">
             {/* Elegant Logo Section */}
@@ -120,7 +130,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center space-x-4 px-4 py-3.5 rounded-2xl transition-all duration-500 group relative overflow-hidden",
+                      "flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-500 group relative overflow-hidden",
                       isActive
                         ? "bg-gradient-to-r from-white/70 via-white/60 to-white/50 dark:from-slate-700/80 dark:via-slate-800/70 dark:to-slate-900/60 backdrop-blur-[30px] border border-white/60 dark:border-slate-500/60 shadow-2xl text-slate-900 dark:text-white font-semibold transform scale-[1.02]"
                         : "hover:bg-gradient-to-r hover:from-white/50 hover:via-white/40 hover:to-white/30 dark:hover:from-slate-800/70 dark:hover:via-slate-700/60 dark:hover:to-slate-800/50 hover:backdrop-blur-[25px] hover:border hover:border-white/40 dark:hover:border-slate-600/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:shadow-xl hover:transform hover:scale-[1.01] hover:-translate-y-0.5"
@@ -136,12 +146,12 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                     
                     {/* Icon container */}
                     <div className={cn(
-                      "relative p-2.5 rounded-xl transition-all duration-500 group-hover:scale-110",
+                      "relative p-2 rounded-lg transition-all duration-500 group-hover:scale-110",
                       isActive 
                         ? "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg" 
                         : "bg-slate-100/80 dark:bg-slate-700/80 group-hover:bg-gradient-to-br group-hover:from-blue-500/20 group-hover:to-indigo-500/20 group-hover:shadow-md"
                     )}>
-                      <Icon className={cn("h-5 w-5 transition-all duration-500", 
+                      <Icon className={cn("h-4 w-4 transition-all duration-500", 
                         isActive ? "text-white drop-shadow-sm" : "text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
                       )} />
                       
@@ -152,7 +162,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                     </div>
                     
                     {/* Label */}
-                    <span className="relative font-semibold text-sm tracking-wide transition-all duration-300">
+                    <span className="relative font-medium text-sm tracking-wide transition-all duration-300">
                       {item.label}
                     </span>
                     
