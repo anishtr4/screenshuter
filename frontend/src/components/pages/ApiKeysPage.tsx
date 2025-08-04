@@ -138,15 +138,27 @@ export function ApiKeysPage() {
           </Button>
         </div>
 
-        {/* Loading State */}
+        {/* Enhanced Loading State */}
         {loading ? (
           <div className="grid gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 p-6">
-                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4"></div>
-                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg mb-2"></div>
-                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg w-2/3"></div>
+              <div key={i} className="group">
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/80 to-slate-50/60 dark:from-slate-800/80 dark:to-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-xl p-8">
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer"></div>
+                  
+                  <div className="flex items-start space-x-6">
+                    <div className="w-14 h-14 bg-gradient-to-br from-blue-200 to-indigo-300 dark:from-blue-600 dark:to-indigo-700 rounded-2xl animate-pulse"></div>
+                    <div className="flex-1 space-y-4">
+                      <div className="w-1/3 h-6 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      <div className="w-full h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      <div className="w-2/3 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                      <div className="flex space-x-4 pt-2">
+                        <div className="w-24 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-20 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -154,12 +166,18 @@ export function ApiKeysPage() {
         ) : (
           <div className="grid gap-6">
             {apiKeys.map((apiKey) => (
-              <div key={apiKey.id} className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01]">
-                {/* Background Pattern */}
-                <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+              <div key={apiKey.id} className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/70 via-white/60 to-slate-50/50 dark:from-slate-800/70 dark:via-slate-800/60 dark:to-slate-900/50 backdrop-blur-[30px] shadow-2xl border border-white/50 dark:border-slate-600/50 hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1">
+                {/* Stunning Background Effects */}
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-transparent to-indigo-500/8"></div>
+                <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent rounded-full blur-2xl group-hover:blur-3xl transition-all duration-500"></div>
+                <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-gradient-to-tr from-indigo-400/15 via-blue-400/10 to-transparent rounded-full blur-xl group-hover:blur-2xl transition-all duration-500"></div>
                 
-                <div className="relative p-6">
+                {/* Hover shimmer effect */}
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 rounded-3xl"></div>
+                </div>
+                
+                <div className="relative p-8">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-4 mb-4">

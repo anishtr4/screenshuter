@@ -69,14 +69,16 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
         sidebarOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         <div className="flex h-full flex-col relative overflow-hidden">
-          {/* Stunning Background */}
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-50/95 via-white/90 to-blue-50/80 dark:from-slate-900/95 dark:via-slate-800/90 dark:to-indigo-950/80 backdrop-blur-3xl"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.1),transparent_50%)] dark:bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]"></div>
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.08),transparent_50%)] dark:bg-[radial-gradient(circle_at_70%_80%,rgba(139,92,246,0.12),transparent_50%)]"></div>
+          {/* Ultra Glassmorphism Background */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/30 via-slate-50/40 to-blue-50/35 dark:from-slate-900/40 dark:via-slate-800/50 dark:to-indigo-950/45 backdrop-blur-[40px]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_25%_15%,rgba(59,130,246,0.15),transparent_40%)] dark:bg-[radial-gradient(circle_at_25%_15%,rgba(59,130,246,0.25),transparent_40%)]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_75%_85%,rgba(139,92,246,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_75%_85%,rgba(139,92,246,0.18),transparent_45%)]"></div>
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(236,72,153,0.08),transparent_60%)] dark:bg-[radial-gradient(circle_at_50%_50%,rgba(236,72,153,0.12),transparent_60%)]"></div>
           
-          {/* Border and Shadow */}
-          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-slate-200/60 to-transparent dark:via-slate-700/60"></div>
-          <div className="absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-black/5 to-transparent dark:from-black/20"></div>
+          {/* Enhanced Border and Shadow Effects */}
+          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-white/80 to-transparent dark:via-slate-600/80"></div>
+          <div className="absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-white/10 via-transparent to-transparent dark:from-black/30"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-white/10 dark:via-slate-800/10 dark:to-slate-700/15"></div>
           
           <div className="relative z-10 flex h-full flex-col">
             {/* Elegant Logo Section */}
@@ -120,8 +122,8 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                     className={cn(
                       "flex items-center space-x-4 px-4 py-3.5 rounded-2xl transition-all duration-500 group relative overflow-hidden",
                       isActive
-                        ? "bg-gradient-to-r from-white/90 to-white/70 dark:from-slate-800/90 dark:to-slate-700/70 backdrop-blur-xl border border-white/40 dark:border-slate-600/40 shadow-xl text-slate-900 dark:text-white font-semibold transform scale-[1.02]"
-                        : "hover:bg-white/60 dark:hover:bg-slate-800/60 hover:backdrop-blur-xl hover:border hover:border-white/30 dark:hover:border-slate-700/30 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:shadow-lg hover:transform hover:scale-[1.01] hover:-translate-y-0.5"
+                        ? "bg-gradient-to-r from-white/70 via-white/60 to-white/50 dark:from-slate-700/80 dark:via-slate-800/70 dark:to-slate-900/60 backdrop-blur-[30px] border border-white/60 dark:border-slate-500/60 shadow-2xl text-slate-900 dark:text-white font-semibold transform scale-[1.02]"
+                        : "hover:bg-gradient-to-r hover:from-white/50 hover:via-white/40 hover:to-white/30 dark:hover:from-slate-800/70 dark:hover:via-slate-700/60 dark:hover:to-slate-800/50 hover:backdrop-blur-[25px] hover:border hover:border-white/40 dark:hover:border-slate-600/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:shadow-xl hover:transform hover:scale-[1.01] hover:-translate-y-0.5"
                     )}
                   >
                     {/* Active indicator glow */}
@@ -180,7 +182,7 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
               <PopoverTrigger asChild>
                 <Button 
                   variant="ghost" 
-                  className="w-full flex items-center justify-start space-x-4 px-5 py-4 rounded-2xl transition-all duration-500 bg-gradient-to-r from-white/80 to-white/60 dark:from-slate-800/80 dark:to-slate-700/60 hover:from-white/90 hover:to-white/80 dark:hover:from-slate-700/90 dark:hover:to-slate-600/80 backdrop-blur-xl border border-white/40 hover:border-white/60 dark:border-slate-600/40 dark:hover:border-slate-500/60 shadow-xl hover:shadow-2xl text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-100 font-medium text-base min-h-[72px] overflow-hidden group transform hover:scale-[1.02] hover:-translate-y-0.5"
+                  className="w-full flex items-center justify-start space-x-4 px-5 py-4 rounded-2xl transition-all duration-500 bg-gradient-to-r from-white/60 via-white/50 to-white/40 dark:from-slate-700/70 dark:via-slate-800/60 dark:to-slate-900/50 hover:from-white/80 hover:via-white/70 hover:to-white/60 dark:hover:from-slate-600/80 dark:hover:via-slate-700/70 dark:hover:to-slate-800/60 backdrop-blur-[35px] border border-white/50 hover:border-white/70 dark:border-slate-500/50 dark:hover:border-slate-400/70 shadow-2xl hover:shadow-3xl text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-slate-100 font-medium text-base min-h-[72px] overflow-hidden group transform hover:scale-[1.02] hover:-translate-y-0.5"
                 >
                   <div className="relative">
                     {/* Avatar with stunning effects */}
