@@ -69,48 +69,50 @@ const SignupPage = () => {
     }
   };
 
+  const appName = import.meta.env.VITE_APP_NAME || 'Thundershot';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 relative overflow-hidden">
-      {/* Animated background elements */}
-      <div className="absolute inset-0">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse"></div>
-        <div className="absolute top-3/4 right-1/4 w-96 h-96 bg-indigo-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-2000"></div>
-        <div className="absolute bottom-1/4 left-1/3 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-xl opacity-20 animate-pulse animation-delay-4000"></div>
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-100 flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-purple-400 to-pink-400 rounded-full opacity-20 animate-pulse"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-blue-400 to-cyan-400 rounded-full opacity-20 animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-gradient-to-br from-indigo-400 to-purple-400 rounded-full opacity-10 animate-pulse" style={{ animationDelay: '2s' }}></div>
       </div>
       
-      <div className="relative z-10 min-h-screen flex">
-        {/* Left side - Hero section */}
-        <div className="hidden lg:flex lg:w-1/2 relative">
-          <div className="flex flex-col justify-center px-12 py-24">
-            <div className="flex items-center mb-8">
-              <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl">
+      <div className="relative z-10 w-full max-w-6xl mx-auto flex items-center justify-center lg:justify-between">
+        {/* Left side - Hero content */}
+        <div className="hidden lg:flex lg:w-1/2 flex-col justify-center pr-12">
+          <div className="transition-all duration-1000 translate-x-0 opacity-100">
+            <div className="flex items-center mb-6">
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
                 <Camera className="h-8 w-8 text-white" />
               </div>
               <span className="ml-3 text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Thundershot
+                {appName}
               </span>
             </div>
             
-            <h1 className="text-5xl font-bold text-white mb-6 leading-tight">
+            <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
               Join the Future of
-              <span className="bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent"> Screenshot Management</span>
+              <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent"> Screenshot Management</span>
             </h1>
             
-            <p className="text-xl text-gray-300 mb-8 leading-relaxed">
+            <p className="text-xl text-gray-600 mb-8 leading-relaxed">
               Create an account to start capturing, organizing, and sharing your screenshots with powerful automation tools.
             </p>
             
             <div className="space-y-4">
-              <div className="flex items-center text-gray-300">
-                <div className="w-2 h-2 bg-indigo-400 rounded-full mr-3"></div>
+              <div className="flex items-center text-gray-600">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full mr-3"></div>
                 <span>Automated screenshot capture</span>
               </div>
-              <div className="flex items-center text-gray-300">
-                <div className="w-2 h-2 bg-purple-400 rounded-full mr-3"></div>
+              <div className="flex items-center text-gray-600">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mr-3"></div>
                 <span>Smart organization & collections</span>
               </div>
-              <div className="flex items-center text-gray-300">
-                <div className="w-2 h-2 bg-pink-400 rounded-full mr-3"></div>
+              <div className="flex items-center text-gray-600">
+                <div className="w-2 h-2 bg-pink-500 rounded-full mr-3"></div>
                 <span>Team collaboration features</span>
               </div>
             </div>
@@ -118,35 +120,35 @@ const SignupPage = () => {
         </div>
         
         {/* Right side - Signup form */}
-        <div className="w-full lg:w-1/2 flex items-center justify-center px-6 py-12">
-          <div className="w-full max-w-md">
+        <div className="w-full lg:w-1/2 flex items-center justify-center">
+          <div className="w-full max-w-md transition-all duration-1000 translate-x-0 opacity-100">
             {/* Mobile header */}
             <div className="lg:hidden text-center mb-8">
               <div className="flex items-center justify-center mb-4">
-                <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl">
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-3 rounded-2xl shadow-lg">
                   <Camera className="h-8 w-8 text-white" />
                 </div>
               </div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Thundershot
+                {appName}
               </h2>
             </div>
             
-            <div className="bg-white/10 backdrop-blur-lg rounded-2xl p-8 shadow-2xl border border-white/20">
+            <div className="bg-white/80 backdrop-blur-lg rounded-3xl p-8 shadow-2xl border border-white/50">
               <div className="text-center mb-8">
-                <h3 className="text-2xl font-bold text-white mb-2">Create Account</h3>
-                <p className="text-gray-300">Join thousands of users managing screenshots efficiently</p>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Create Account</h3>
+                <p className="text-gray-600">Join thousands of users managing screenshots efficiently</p>
               </div>
         
               {error && (
-                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-300 rounded-lg backdrop-blur-sm">
+                <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 text-red-600 rounded-lg backdrop-blur-sm">
                   {error}
                 </div>
               )}
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Name
                   </label>
                   <input
@@ -155,13 +157,13 @@ const SignupPage = () => {
                     value={formData.name}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-gray-400 backdrop-blur-sm transition-all"
+                    className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 placeholder-gray-500 backdrop-blur-sm transition-all"
                     placeholder="Enter your full name"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Email
                   </label>
                   <input
@@ -170,13 +172,13 @@ const SignupPage = () => {
                     value={formData.email}
                     onChange={handleChange}
                     required
-                    className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-gray-400 backdrop-blur-sm transition-all"
+                    className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 placeholder-gray-500 backdrop-blur-sm transition-all"
                     placeholder="Enter your email"
                   />
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Password
                   </label>
                   <div className="relative">
@@ -186,13 +188,13 @@ const SignupPage = () => {
                       value={formData.password}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-gray-400 backdrop-blur-sm transition-all"
+                      className="w-full px-4 py-3 pr-12 bg-white/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 placeholder-gray-500 backdrop-blur-sm transition-all"
                       placeholder="Enter your password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 transition-colors"
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -204,7 +206,7 @@ const SignupPage = () => {
                 </div>
                 
                 <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Confirm Password
                   </label>
                   <div className="relative">
@@ -214,13 +216,13 @@ const SignupPage = () => {
                       value={formData.confirmPassword}
                       onChange={handleChange}
                       required
-                      className="w-full px-4 py-3 pr-12 bg-white/10 border border-white/20 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-white placeholder-gray-400 backdrop-blur-sm transition-all"
+                      className="w-full px-4 py-3 pr-12 bg-white/50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-gray-900 placeholder-gray-500 backdrop-blur-sm transition-all"
                       placeholder="Confirm your password"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white transition-colors"
+                      className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-500 hover:text-gray-700 transition-colors"
                     >
                       {showConfirmPassword ? (
                         <EyeOff className="h-5 w-5" />

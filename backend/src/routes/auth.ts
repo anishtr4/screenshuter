@@ -6,14 +6,14 @@ import { authenticateJWT } from '../middleware/auth';
 const router = Router();
 
 /**
- * @route   POST /api/v1/auth/signup
+ * @route   POST /api/auth/register
  * @desc    Register a new user
  * @access  Public
  */
-router.post('/signup', validateSignup, signup);
+router.post('/register', validateSignup, signup);
 
 /**
- * @route   POST /api/v1/auth/login
+ * @route   POST /api/auth/login
  * @desc    Login user
  * @access  Public
  */

@@ -530,10 +530,13 @@ const ProjectDetailPage: React.FC = () => {
               <span>{isConnected ? 'Live updates connected' : 'Disconnected'}</span>
             </div>
             
-            <Button onClick={() => setShowAddModal(true)}>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 flex items-center justify-center transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl font-medium"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Add Screenshot
-            </Button>
+            </button>
           </div>
         </div>
 
@@ -575,13 +578,13 @@ const ProjectDetailPage: React.FC = () => {
                 }
               </p>
               {!searchTerm && (
-                <Button 
-                  className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-3 rounded-xl font-semibold"
+                <button 
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 flex items-center justify-center transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl font-medium"
                   onClick={() => setShowAddModal(true)}
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Add Screenshot
-                </Button>
+                </button>
               )}
             </div>
           </div>
@@ -692,7 +695,7 @@ const ProjectDetailPage: React.FC = () => {
                     onClick={() => isCollection ? handleViewCollection(screenshot) : handleViewImage(screenshot)}
                     onMouseEnter={() => {
                       // Load image on hover for better UX
-                      if (!isCollection && screenshot.status === 'completed' && !imageUrls[screenshotId]) {
+                      if (!isCollection && screenshot.status === 'completed' && screenshotId && !imageUrls[screenshotId]) {
                         loadImageUrls([screenshot])
                       }
                     }}
@@ -706,7 +709,7 @@ const ProjectDetailPage: React.FC = () => {
                     ) : (
                       // Individual Screenshot - Show Thumbnail
                       <div className="relative h-full">
-                        {imageUrls[screenshotId] ? (
+                        {screenshotId && imageUrls[screenshotId] ? (
                           <img
                             src={imageUrls[screenshotId]}
                             alt={screenshot.title || screenshot.url}
