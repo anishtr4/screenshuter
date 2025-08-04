@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { X, Download, Eye, Grid, List, Archive } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { apiClient } from '../../lib/api'
 
 interface Screenshot {
   id: string
@@ -58,28 +59,16 @@ export const CollectionFramesModal = ({
     
     try {
       const screenshotId = frame._id || frame.id
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       
-      const response = await fetch(`${apiUrl}/images/${screenshotId}?type=full`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `${frame.title || frame.metadata?.title || 'screenshot'}.png`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        toast.success('Image downloaded successfully')
-      } else {
-        toast.error('Failed to download image')
-      }
+      const url = await apiClient.getImageUrl(screenshotId, 'full')
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${frame.title || frame.metadata?.title || 'screenshot'}.png`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.success('Image downloaded successfully')
     } catch (error) {
       console.error('Failed to download image:', error)
       toast.error('Failed to download image')
@@ -91,28 +80,17 @@ export const CollectionFramesModal = ({
 
     try {
       setDownloading(true)
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       
-      const response = await fetch(`${apiUrl}/collections/${collection.id}/download`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `${collection.name || 'collection'}.zip`
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-        toast.success('Collection downloaded successfully')
-      } else {
-        toast.error('Failed to download collection')
-      }
+      const blob = await apiClient.downloadCollectionZip(collection.id)
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${collection.name || 'collection'}.zip`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      URL.revokeObjectURL(url)
+      toast.success('Collection downloaded successfully')
     } catch (error) {
       console.error('Failed to download collection:', error)
       toast.error('Failed to download collection')

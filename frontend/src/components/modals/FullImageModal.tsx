@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { X, Download, ExternalLink, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
+import { apiClient } from '../../lib/api'
 
 interface Screenshot {
   id: string
@@ -46,19 +47,11 @@ export const FullImageModal = ({ isOpen, onClose, screenshot, imageUrl }: FullIm
       setError(false)
       
       const screenshotId = screenshot._id || screenshot.id
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
       
-      const response = await fetch(`${apiUrl}/images/${screenshotId}?type=full`, {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      })
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = URL.createObjectURL(blob)
+      try {
+        const url = await apiClient.getImageUrl(screenshotId, 'full')
         setFullImageUrl(url)
-      } else {
+      } catch (error) {
         setError(true)
         toast.error('Failed to load full image')
       }

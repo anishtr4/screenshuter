@@ -309,6 +309,20 @@ class ApiClient {
     })
     return response.data
   }
+
+  // Image methods
+  async getImage(screenshotId: string, type?: 'full' | 'thumbnail') {
+    const params = type ? `?type=${type}` : ''
+    const response = await this.client.get(`/images/${screenshotId}${params}`, {
+      responseType: 'blob'
+    })
+    return response.data
+  }
+
+  async getImageUrl(screenshotId: string, type?: 'full' | 'thumbnail') {
+    const blob = await this.getImage(screenshotId, type)
+    return URL.createObjectURL(blob)
+  }
 }
 
 export const apiClient = new ApiClient()
