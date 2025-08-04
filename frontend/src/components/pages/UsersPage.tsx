@@ -298,23 +298,10 @@ export function UsersPage() {
   }
 
   return (
-    <DashboardLayout title="Users" subtitle="Manage user accounts and permissions">
+    <DashboardLayout title={`Users (${filteredUsers.length})`} subtitle="Manage user accounts and permissions">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Users className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                Users ({filteredUsers.length})
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Manage user accounts and their access permissions
-              </p>
-            </div>
-          </div>
+        {/* Header Actions */}
+        <div className="flex items-center justify-end">
           <div className="flex items-center space-x-3">
             <Button 
               variant="outline"

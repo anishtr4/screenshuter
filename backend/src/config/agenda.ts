@@ -34,16 +34,16 @@ agenda.define('capture-screenshot', async (job: any) => {
 });
 
 agenda.define('capture-frame-screenshot', async (job: any) => {
-  const { screenshotId, url, projectId, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture } = job.attrs.data;
+  const { collectionId, url, projectId, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture } = job.attrs.data;
   
   logger.info(`Starting frame screenshot capture job for ${url} at ${frameDelay}s`, { 
-    screenshotId, projectId, userId, frameDelay, frameIndex, totalFrames 
+    collectionId, projectId, userId, frameDelay, frameIndex, totalFrames 
   });
   
   try {
     const screenshotService = new ScreenshotService();
     await screenshotService.captureFrameScreenshot({
-      screenshotId,
+      collectionId,
       url,
       projectId,
       userId,
@@ -54,7 +54,7 @@ agenda.define('capture-frame-screenshot', async (job: any) => {
       isScrollCapture
     });
     
-    logger.info(`Frame screenshot capture completed for ${url} at ${frameDelay}s`, { screenshotId });
+    logger.info(`Frame screenshot capture completed for ${url} at ${frameDelay}s`, { collectionId, frameIndex });
   } catch (error) {
     logger.error(`Frame screenshot capture failed for ${url} at ${frameDelay}s:`, error);
     throw error;

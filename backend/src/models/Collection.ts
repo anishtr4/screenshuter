@@ -5,6 +5,7 @@ export interface ICollection extends Document {
   baseUrl: string;
   name: string;
   type: 'crawl' | 'frame';
+  status?: 'pending' | 'processing' | 'completed' | 'failed';
   metadata?: {
     frameCount?: number;
     timeFrames?: number[];
@@ -12,6 +13,7 @@ export interface ICollection extends Document {
     totalUrls?: number;
   };
   createdAt: Date;
+  updatedAt: Date;
 }
 
 const collectionSchema = new Schema<ICollection>({
@@ -37,6 +39,11 @@ const collectionSchema = new Schema<ICollection>({
     enum: ['crawl', 'frame'],
     required: true
   },
+  status: {
+    type: String,
+    enum: ['pending', 'processing', 'completed', 'failed'],
+    default: 'pending'
+  },
   metadata: {
     frameCount: Number,
     timeFrames: [Number],
@@ -44,6 +51,10 @@ const collectionSchema = new Schema<ICollection>({
     totalUrls: Number
   },
   createdAt: {
+    type: Date,
+    default: Date.now
+  },
+  updatedAt: {
     type: Date,
     default: Date.now
   }

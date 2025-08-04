@@ -61,6 +61,7 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       baseUrl: url,
       name: `Frame Screenshots of ${new URL(url).hostname} - ${new Date().toLocaleDateString()}`,
       type: 'frame',
+      status: 'processing', // Set to processing when starting
       metadata: {
         frameCount: validTimeFrames.length,
         timeFrames: validTimeFrames,
@@ -70,31 +71,22 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
 
     await collection.save();
 
-    // Create screenshot records for each time frame
+    // Don't create individual screenshot records yet - they'll be created during processing
+    // This prevents them from showing up in the UI before collection progress is established
     const screenshots = [];
+    
+    // Just prepare the data for job scheduling
     for (let i = 0; i < validTimeFrames.length; i++) {
       const frameDelay = validTimeFrames[i];
-      
-      const screenshot = new Screenshot({
-        projectId,
-        url,
-        imagePath: '', // Will be updated when captured
-        type: 'frame',
-        collectionId: collection._id,
-        status: 'pending',
-        metadata: {
-          frameDelay,
-          frameIndex: i + 1,
-          totalFrames: validTimeFrames.length
-        }
+      screenshots.push({
+        frameDelay,
+        frameIndex: i + 1,
+        totalFrames: validTimeFrames.length
       });
-
-      await screenshot.save();
-      screenshots.push(screenshot);
 
       // Debug logging for job data
       const jobData = {
-        screenshotId: screenshot._id.toString(),
+        collectionId: collection._id.toString(),
         url,
         projectId,
         userId,
@@ -122,7 +114,10 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       totalScreenshots: validTimeFrames.length,
       completedScreenshots: 0,
       progress: 0,
-      stage: `Starting ${validTimeFrames.length} frame captures...`
+      stage: `Starting ${validTimeFrames.length} frame captures...`,
+      url,
+      type: 'frame' as const,
+      startTime: Date.now()
     });
 
     logger.info(`Frame screenshot jobs scheduled for ${url}`, { 
@@ -143,11 +138,10 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
         createdAt: collection.createdAt
       },
       screenshots: screenshots.map(s => ({
-        id: s._id,
-        url: s.url,
-        frameDelay: s.metadata?.frameDelay,
-        frameIndex: s.metadata?.frameIndex,
-        status: s.status
+        frameDelay: s.frameDelay,
+        frameIndex: s.frameIndex,
+        totalFrames: s.totalFrames,
+        status: 'pending' // Screenshots will be created during processing
       })),
       frameCount: validTimeFrames.length,
       timeFrames: validTimeFrames

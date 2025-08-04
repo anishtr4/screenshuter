@@ -143,16 +143,8 @@ const ProjectsPage = () => {
   return (
     <DashboardLayout title="Projects" subtitle="Manage your screenshot projects and collections">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-              Projects
-            </h1>
-            <p className="text-slate-600 dark:text-slate-400 mt-2">
-              Manage your screenshot projects
-            </p>
-          </div>
+        {/* Header Actions */}
+        <div className="flex items-center justify-end">
           <Button 
             onClick={() => setShowAddModal(true)}
             className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold"

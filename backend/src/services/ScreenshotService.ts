@@ -104,6 +104,16 @@ export class ScreenshotService {
   async captureScreenshot(data: ScreenshotJobData): Promise<void> {
     const { screenshotId, url, userId, type, collectionId, collectionName } = data;
     
+    // DEBUG: Track function calls to detect duplicates
+    logger.info(`🔥 captureScreenshot STARTED for screenshotId: ${screenshotId}`, {
+      screenshotId,
+      url,
+      userId,
+      type,
+      collectionId,
+      timestamp: new Date().toISOString()
+    });
+    
     // Create metadata for collection screenshots
     const metadata = collectionId ? {
       isCollection: true,
@@ -258,7 +268,7 @@ export class ScreenshotService {
         ? `uploads/collections/${collectionId}/${screenshotId}`
         : `uploads/screenshots/${screenshotId}`;
 
-      await Screenshot.findByIdAndUpdate(screenshotId, {
+      const updatedScreenshot = await Screenshot.findByIdAndUpdate(screenshotId, {
         status: 'completed',
         imagePath: `${relativePath}/full.png`,
         thumbnailPath: `${relativePath}/thumbnail.png`,
@@ -269,7 +279,7 @@ export class ScreenshotService {
           fileSize: stats.size,
           capturedAt: new Date()
         }
-      });
+      }, { new: true }); // Return the updated document
 
       // Emit completion progress
       io.to(`user-${userId}`).emit('screenshot-progress', {
@@ -277,13 +287,18 @@ export class ScreenshotService {
         status: 'completed',
         progress: 100,
         stage: 'Screenshot completed!',
+        url, // Add URL for frontend to create complete screenshot object
         imagePath: `${relativePath}/full.png`,
         thumbnailPath: `${relativePath}/thumbnail.png`,
+        createdAt: updatedScreenshot?.createdAt, // Add actual creation date for consistency
+        type: updatedScreenshot?.type, // Add type for frontend filtering
+        collectionId: updatedScreenshot?.collectionId, // Add collectionId for frontend filtering
         metadata: {
           title,
           width: imageInfo.width,
           height: imageInfo.height,
           fileSize: stats.size,
+          capturedAt: new Date(),
           ...(metadata || {})
         }
       });
@@ -313,31 +328,41 @@ export class ScreenshotService {
     }
   }
 
-  async captureFrameScreenshot(data: FrameScreenshotJobData): Promise<void> {
+  async captureFrameScreenshot(data: any): Promise<void> {
     // Debug logging for received job data
     logger.info(`📬 Frame job received`, {
-      screenshotId: data.screenshotId,
+      collectionId: data.collectionId,
       frameIndex: data.frameIndex,
       autoScroll: data.autoScroll,
       autoScrollEnabled: data.autoScroll?.enabled,
       isScrollCapture: data.isScrollCapture
     });
     
-    const { screenshotId, url, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture, projectId } = data;
+    const { collectionId, url, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture, projectId } = data;
+    
+    let screenshotId: string | undefined;
     
     try {
-      // Update status to processing
-      await Screenshot.findByIdAndUpdate(screenshotId, { 
-        status: 'processing' 
-      });
-
-      // Emit initial progress
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
+      // Create the screenshot record (similar to crawl approach)
+      const newScreenshot = new Screenshot({
+        projectId,
+        url,
+        imagePath: '', // Will be updated when captured
+        type: 'frame',
+        collectionId,
         status: 'processing',
-        progress: 0,
-        stage: `Capturing frame ${frameIndex}/${totalFrames} at ${frameDelay}s...`
+        metadata: {
+          frameDelay,
+          frameIndex,
+          totalFrames
+        }
       });
+      
+      await newScreenshot.save();
+      screenshotId = newScreenshot._id.toString();
+
+      // No individual screenshot progress - only collection progress
+      // This prevents individual progress indicators from showing
 
       const browser = await this.getBrowser();
       const page = await browser.newPage();
@@ -349,12 +374,15 @@ export class ScreenshotService {
       });
 
       // Emit progress: navigating to URL
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'processing',
-        progress: 20,
-        stage: `Loading ${url}...`
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 20,
+          stage: `Loading ${url}...`
+        });
+      }
 
       // Navigate to the URL
       await page.goto(url, { 
@@ -364,31 +392,45 @@ export class ScreenshotService {
 
       // Wait for the specified frame delay
       if (frameDelay > 0) {
-        io.to(`user-${userId}`).emit('screenshot-progress', {
-          screenshotId,
-          status: 'processing',
-          progress: 40,
-          stage: `Waiting ${frameDelay}s for frame timing...`
-        });
+        // Ensure screenshotId is defined before using it in emit
+        if (screenshotId) {
+          io.to(`user-${userId}`).emit('screenshot-progress', {
+            screenshotId,
+            status: 'processing',
+            progress: 40,
+            stage: `Waiting ${frameDelay}s for frame timing...`
+          });
+        }
         
         await page.waitForTimeout(frameDelay * 1000);
       }
 
       // Emit progress: taking screenshot
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'processing',
-        progress: 60,
-        stage: 'Taking screenshot...'
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 60,
+          stage: 'Taking screenshot...'
+        });
+      }
 
       // Get the screenshot document to find collectionId
+      // Ensure screenshotId is defined before querying database
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const screenshot = await Screenshot.findById(screenshotId);
       if (!screenshot) {
         throw new Error('Screenshot not found');
       }
 
       // Create directory for this screenshot
+      // Ensure screenshotId is defined before using it
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const screenshotDir = await this.ensureScreenshotDirectory(screenshotId, screenshot.collectionId?.toString());
       
       // Take the screenshot
@@ -400,12 +442,15 @@ export class ScreenshotService {
       });
 
       // Emit progress: processing image
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'processing',
-        progress: 80,
-        stage: 'Processing image...'
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 80,
+          stage: 'Processing image...'
+        });
+      }
 
       // Create thumbnail
       const thumbnailPath = path.join(screenshotDir, 'thumbnail.jpg');
@@ -415,29 +460,52 @@ export class ScreenshotService {
         .toFile(thumbnailPath);
 
       // Update screenshot with paths (include uploads/ prefix for image controller)
+      // Ensure screenshotId is defined before using it
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const relativePath = screenshot.collectionId 
         ? path.join('uploads', 'collections', screenshot.collectionId.toString(), screenshotId, 'screenshot.png')
         : path.join('uploads', 'screenshots', screenshotId, 'screenshot.png');
       
+      // Ensure screenshotId is defined before using it
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const relativeThumbnailPath = screenshot.collectionId 
         ? path.join('uploads', 'collections', screenshot.collectionId.toString(), screenshotId, 'thumbnail.jpg')
         : path.join('uploads', 'screenshots', screenshotId, 'thumbnail.jpg');
 
-      await Screenshot.findByIdAndUpdate(screenshotId, {
+      const updatedScreenshot = await Screenshot.findByIdAndUpdate(screenshotId, {
         imagePath: relativePath,
         thumbnailPath: relativeThumbnailPath,
         status: 'completed'
-      });
+      }, { new: true }); // Return the updated document
 
       await page.close();
 
       // Emit completion
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'completed',
-        progress: 100,
-        stage: `Frame ${frameIndex}/${totalFrames} completed!`
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'completed',
+          progress: 100,
+          stage: `Frame ${frameIndex}/${totalFrames} completed!`,
+          url: updatedScreenshot?.url || url, // Add URL for frontend
+          type: updatedScreenshot?.type, // Add type for filtering
+          collectionId: updatedScreenshot?.collectionId, // Add collectionId for filtering
+          createdAt: updatedScreenshot?.createdAt, // Add creation date for consistency
+          imagePath: relativePath,
+          thumbnailPath: relativeThumbnailPath,
+          metadata: {
+            title: updatedScreenshot?.metadata?.title || 'Frame Screenshot',
+            frameIndex,
+            totalFrames,
+            frameDelay
+          }
+        });
+      }
 
       // Update collection progress
       if (screenshot.collectionId) {
@@ -451,13 +519,87 @@ export class ScreenshotService {
         const progress = Math.round((completedTimeFrames / totalFrames) * 100);
         
         // Emit collection progress update
-        io.to(`user-${userId}`).emit('collection-progress', {
+        const collectionProgressData = {
           collectionId: screenshot.collectionId.toString(),
           totalScreenshots: totalFrames,
           completedScreenshots: completedTimeFrames,
           progress,
-          stage: `Captured ${completedTimeFrames}/${totalFrames} frames`
+          stage: `Captured ${completedTimeFrames}/${totalFrames} frames`,
+          url: screenshot.url,
+          type: 'frame' as const,
+          startTime: Date.now()
+        };
+        
+        logger.info(`📡 Emitting collection progress`, {
+          userId,
+          collectionProgressData,
+          hasUrl: !!collectionProgressData.url,
+          hasType: !!collectionProgressData.type
         });
+        
+        io.to(`user-${userId}`).emit('collection-progress', collectionProgressData);
+        
+        // Debug completion condition
+        logger.info(`🔍 Checking completion condition`, {
+          progress,
+          completedTimeFrames,
+          totalFrames,
+          completedGreaterOrEqual: completedTimeFrames >= totalFrames,
+          hasCollectionId: !!screenshot.collectionId,
+          shouldComplete: completedTimeFrames >= totalFrames && screenshot.collectionId
+        });
+        
+        // Check if collection is fully completed (all frames done)
+        // Use >= 100 to handle rounding issues and simplify autoScroll check
+        if (completedTimeFrames >= totalFrames && screenshot.collectionId) {
+          logger.info(`✅ Collection fully completed`, {
+            collectionId: screenshot.collectionId.toString(),
+            completedTimeFrames,
+            totalFrames
+          });
+          
+          // Update collection with completed status and refresh timestamp
+          await Collection.findByIdAndUpdate(screenshot.collectionId, {
+            status: 'completed',
+            updatedAt: new Date() // This ensures it appears first in sorted list
+          });
+          
+          // Emit final completion event to clear progress state
+          const completionData = {
+            collectionId: screenshot.collectionId.toString(),
+            totalScreenshots: totalFrames,
+            completedScreenshots: totalFrames,
+            progress: 100,
+            stage: 'Collection completed!',
+            url: screenshot.url,
+            type: 'frame' as const,
+            startTime: Date.now(),
+            completed: true // Flag to indicate completion
+          };
+          
+          logger.info(`🎉 Emitting final completion event`, {
+            userId,
+            completionData,
+            room: `user-${userId}`
+          });
+          
+          io.to(`user-${userId}`).emit('collection-progress', completionData);
+          
+          // Clear progress after a short delay to allow UI to show completion
+          setTimeout(() => {
+            if (screenshot.collectionId) {
+              logger.info(`🧹 Emitting collection progress clear event`, {
+                userId,
+                collectionId: screenshot.collectionId.toString(),
+                room: `user-${userId}`
+              });
+              
+              io.to(`user-${userId}`).emit('collection-progress-clear', {
+                collectionId: screenshot.collectionId.toString()
+              });
+            }
+          }, 2000);
+        }
         
         // Debug logging for auto-scroll trigger
         logger.info(`🔍 Auto-scroll trigger check`, {
@@ -485,6 +627,9 @@ export class ScreenshotService {
             completedScreenshots: totalFrames,
             progress: 100,
             stage: 'Starting auto-scroll capture...',
+            url: screenshot.url,
+            type: 'frame' as const,
+            startTime: Date.now(),
             isScrolling: true
           });
           
@@ -504,19 +649,15 @@ export class ScreenshotService {
     } catch (error) {
       logger.error(`Frame screenshot capture failed for ${url}:`, error);
       
-      // Update screenshot status to failed
-      await Screenshot.findByIdAndUpdate(screenshotId, {
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
-      });
+      // Update screenshot status to failed if it was created
+      if (screenshotId) {
+        await Screenshot.findByIdAndUpdate(screenshotId, {
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
 
-      // Emit failure
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'failed',
-        progress: 0,
-        stage: `Frame ${frameIndex} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+      // No individual progress emits - collection progress will handle failures
 
       throw error;
     }
@@ -806,6 +947,9 @@ export class ScreenshotService {
           completedScreenshots: totalFrames + screenshotCount,
           progress: Math.round(((totalFrames + screenshotCount) / (totalFrames + screenshotCount + 1)) * 100),
           stage: `Auto-scroll: captured ${screenshotCount} additional screenshots`,
+          url,
+          type: 'crawl' as const,
+          startTime: Date.now(),
           isScrolling: true
         });
       }
@@ -819,6 +963,9 @@ export class ScreenshotService {
         completedScreenshots: totalFrames + screenshotCount,
         progress: 100,
         stage: `Completed: ${totalFrames} frames + ${screenshotCount} scroll captures`,
+        url,
+        type: 'crawl' as const,
+        startTime: Date.now(),
         isScrolling: false
       });
       
@@ -838,6 +985,9 @@ export class ScreenshotService {
         completedScreenshots: totalFrames,
         progress: 100,
         stage: `Auto-scroll failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        url,
+        type: 'crawl' as const,
+        startTime: Date.now(),
         isScrolling: false
       });
     }
@@ -868,13 +1018,16 @@ export class ScreenshotService {
 
       const screenshots = await Promise.all(screenshotPromises);
 
-      // Emit initial crawl progress
+      // Emit initial crawl progress with correct type
       io.to(`user-${userId}`).emit('collection-progress', {
         collectionId,
         totalScreenshots: screenshots.length,
         completedScreenshots: 0,
         progress: 0,
-        stage: 'Starting crawl capture...'
+        stage: 'Starting crawl capture...',
+        url: urls.length === 1 ? urls[0] : `${urls.length} URLs`,
+        type: 'crawl' as const,
+        startTime: Date.now()
       });
 
       // Capture screenshots sequentially to avoid overwhelming the browser
@@ -900,7 +1053,10 @@ export class ScreenshotService {
             totalScreenshots: screenshots.length,
             completedScreenshots: completedCount,
             progress,
-            stage: `Captured ${completedCount}/${screenshots.length} screenshots`
+            stage: `Captured ${completedCount}/${screenshots.length} screenshots`,
+            url: screenshot.url,
+            type: 'crawl' as const,
+            startTime: Date.now()
           });
           
         } catch (error) {

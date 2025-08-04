@@ -50,17 +50,8 @@ export function DashboardPage() {
   }
 
   return (
-    <DashboardLayout title="Dashboard" subtitle="Manage your projects and screenshots">
+    <DashboardLayout title={`Welcome back, ${user?.email?.split('@')[0] || 'User'}!`} subtitle="Manage your projects and screenshots">
       <div className="space-y-8">
-        {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-            Welcome back, {user?.email?.split('@')[0] || 'User'}!
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Manage your projects and screenshots
-          </p>
-        </div>
 
         {/* Projects Grid */}
         {loading ? (

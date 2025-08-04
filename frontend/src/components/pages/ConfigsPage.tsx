@@ -9,8 +9,7 @@ import {
   Globe,
   Shield,
   Clock,
-  HardDrive,
-  Settings
+  HardDrive
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -235,21 +234,8 @@ export function ConfigsPage() {
   return (
     <DashboardLayout title="Configs" subtitle="System configuration and settings">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Settings className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                System Configuration
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Manage application settings and configuration
-              </p>
-            </div>
-          </div>
+        {/* Header Actions */}
+        <div className="flex items-center justify-end">
           <div className="flex items-center space-x-3">
             <Button
               variant="outline"

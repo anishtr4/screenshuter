@@ -127,21 +127,8 @@ export function ApiKeysPage() {
   return (
     <DashboardLayout title="API Keys" subtitle="Manage your API keys for external integrations">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Key className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                API Keys
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Manage your API keys for external integrations
-              </p>
-            </div>
-          </div>
+        {/* Header Actions */}
+        <div className="flex items-center justify-end">
           <Button 
             onClick={() => setShowApiKeyModal(true)}
             className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold"
