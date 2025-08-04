@@ -552,13 +552,7 @@ const ProjectDetailPage: React.FC = () => {
           />
         </div>
 
-        {/* Socket Connection Status */}
-        {isConnected && (
-          <div className="flex items-center space-x-2 text-sm text-green-600 dark:text-green-400">
-            <Wifi className="h-4 w-4" />
-            <span>Live updates connected</span>
-          </div>
-        )}
+
 
         {/* Professional Screenshots Grid */}
         {filteredScreenshots.length === 0 ? (
