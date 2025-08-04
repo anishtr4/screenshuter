@@ -184,7 +184,6 @@ const ProjectDetailPage: React.FC = () => {
   // Load image URLs for thumbnails using blob URLs with proper auth
   const loadImageUrls = async (screenshotsToLoad: Screenshot[]) => {
     const newUrls: Record<string, string> = {}
-    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
     
     for (const screenshot of screenshotsToLoad) {
       const screenshotId = screenshot.id || screenshot._id
@@ -195,26 +194,9 @@ const ProjectDetailPage: React.FC = () => {
       if (isCollection) continue
       
       try {
-        // Fetch image with proper authentication headers
-        const token = localStorage.getItem('token')
-        
-        const response = await fetch(`${API_BASE_URL}/images/${screenshotId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
-        
-        if (response.ok) {
-          const blob = await response.blob()
-          const imageUrl = URL.createObjectURL(blob)
-          newUrls[screenshotId] = imageUrl
-          console.log('✅ Successfully loaded image for:', screenshotId)
-        } else if (response.status === 404) {
-          // Image not found - this is expected for screenshots that haven't been processed yet
-          console.log('⏳ Image not ready yet for screenshot:', screenshotId)
-        } else {
-          console.warn('⚠️ Failed to load image:', response.status, response.statusText, 'for', screenshotId)
-        }
+        const imageUrl = await apiClient.getImageUrl(screenshotId)
+        newUrls[screenshotId] = imageUrl
+        console.log('✅ Successfully loaded image for:', screenshotId)
       } catch (error) {
         console.error('Error loading image for', screenshotId, ':', error)
       }
@@ -342,25 +324,14 @@ const ProjectDetailPage: React.FC = () => {
       
       // Load thumbnails for all screenshots in the collection
       const newUrls: Record<string, string> = {}
-      const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8002/api'
-      const token = localStorage.getItem('token')
       
       for (const screenshot of collectionScreenshots) {
         const screenshotId = screenshot.id || screenshot._id
         if (!screenshotId || imageUrls[screenshotId]) continue
         
         try {
-          const response = await fetch(`${API_BASE_URL}/images/${screenshotId}`, {
-            headers: {
-              'Authorization': `Bearer ${token}`
-            }
-          })
-          
-          if (response.ok) {
-            const blob = await response.blob()
-            const imageUrl = URL.createObjectURL(blob)
-            newUrls[screenshotId] = imageUrl
-          }
+          const imageUrl = await apiClient.getImageUrl(screenshotId)
+          newUrls[screenshotId] = imageUrl
         } catch (error) {
           console.error(`Failed to load thumbnail for ${screenshotId}:`, error)
         }
