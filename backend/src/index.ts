@@ -63,7 +63,7 @@ app.use(helmet({
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Allow inline scripts for Next.js
       styleSrc: ["'self'", "'unsafe-inline'", "https:"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", "data:", "https:", "blob:"],
       fontSrc: ["'self'", "https:", "data:"],
       connectSrc: ["'self'", "ws:", "wss:"], // Allow WebSocket connections for Socket.io
       frameSrc: ["'self'"],
