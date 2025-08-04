@@ -14,6 +14,7 @@ const LoginPage = () => {
   const [success, setSuccess] = useState('');
   const [mounted, setMounted] = useState(false);
   const navigate = useNavigate();
+  const appName = import.meta.env.VITE_APP_NAME || 'Thundershot';
 
   useEffect(() => {
     setMounted(true);
@@ -118,7 +119,7 @@ const LoginPage = () => {
                 <Camera className="h-8 w-8 text-white" />
               </div>
               <span className="ml-3 text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Thundershot
+                {appName}
               </span>
             </div>
             
@@ -163,7 +164,7 @@ const LoginPage = () => {
                 <Camera className="h-8 w-8 text-white" />
               </div>
               <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                Thundershot
+                {appName}
               </h2>
             </div>
             
