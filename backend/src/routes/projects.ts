@@ -66,6 +66,25 @@ router.get('/:id/collections', async (req, res) => {
 });
 
 /**
+ * @route   DELETE /api/v1/projects/:projectId/collections/:collectionId
+ * @desc    Delete a collection and all its screenshots
+ * @access  Private
+ */
+router.delete('/:projectId/collections/:collectionId', async (req, res) => {
+  // This will be handled by importing from screenshot controller
+  const { deleteCollection } = require('../controllers/screenshotController');
+  // Create a new request object with the correct id parameter
+  const modifiedReq = {
+    ...req,
+    params: {
+      ...req.params,
+      id: req.params.collectionId
+    }
+  };
+  return deleteCollection(modifiedReq, res);
+});
+
+/**
  * @route   PUT /api/v1/projects/:id
  * @desc    Update a project
  * @access  Private

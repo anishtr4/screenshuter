@@ -1,121 +1,213 @@
-# Screenshot SaaS - Production Deployment Guide
+# Screenshot SaaS - Manual Production Deployment Guide
 
 ## Overview
 
-This guide covers deploying the Screenshot SaaS application to production with a custom domain like `https://screenshot.amazon.in`.
+This guide covers manually deploying the Screenshot SaaS application to production. The application consists of a React frontend and Node.js backend that can be deployed to any server or cloud platform.
 
 ## Prerequisites
 
-- Linux server (Ubuntu 20.04+ recommended)
+- Linux server (Ubuntu 20.04+ recommended) or cloud platform
 - Node.js 18+ and npm
-- MongoDB (local or cloud instance)
-- PM2 process manager
-- Nginx (for reverse proxy)
+- MongoDB (local, cloud instance, or MongoDB Atlas)
+- PM2 process manager (for Node.js apps)
+- Nginx (for reverse proxy and static file serving)
 - SSL certificate (for HTTPS)
 - Domain name configured
 
-## Quick Start
+## Manual Deployment Steps
 
-### 1. Clone and Setup
+### 1. Server Setup
 
 ```bash
-git clone <your-repo>
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install Node.js 18+
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Install PM2 globally
+sudo npm install -g pm2
+
+# Install Nginx
+sudo apt install nginx -y
+```
+
+### 2. Clone and Setup Application
+
+```bash
+# Clone repository
+git clone <your-repository-url>
 cd screenshot-saas
-chmod +x deploy.sh
+
+# Install backend dependencies
+cd backend
+npm install
+
+# Install frontend dependencies
+cd ../frontend
+npm install
 ```
 
-### 2. Configure for Production
+### 3. Configure Environment Variables
+
+Create environment files for both frontend and backend:
+
+**Backend Environment (.env)**
+```bash
+cd backend
+cat > .env << EOF
+NODE_ENV=production
+PORT=8003
+MONGODB_URI=mongodb://localhost:27017/screenshot-saas-prod
+JWT_SECRET=$(openssl rand -base64 64)
+FRONTEND_URL=https://yourdomain.com
+EOF
+```
+
+**Frontend Environment (.env)**
+```bash
+cd ../frontend
+cat > .env << EOF
+VITE_API_URL=https://yourdomain.com/api
+VITE_WS_URL=https://yourdomain.com
+EOF
+```
+
+### 4. Build the Applications
 
 ```bash
-# Copy the production config template
-cp deploy.config.local.example.sh deploy.config.local.sh
+# Build backend
+cd backend
+npm run build
 
-# Edit the configuration
-nano deploy.config.local.sh
+# Build frontend
+cd ../frontend
+npm run build
 ```
 
-### 3. Deploy
+### 5. Configure PM2 for Backend
+
+Create PM2 ecosystem file:
+```bash
+cd ..
+cat > ecosystem.config.js << EOF
+module.exports = {
+  apps: [{
+    name: 'screenshot-saas-backend',
+    script: './backend/dist/index.js',
+    instances: 2,
+    exec_mode: 'cluster',
+    env: {
+      NODE_ENV: 'production',
+      PORT: 8003
+    },
+    error_file: './logs/err.log',
+    out_file: './logs/out.log',
+    log_file: './logs/combined.log',
+    time: true
+  }]
+};
+EOF
+
+# Create logs directory
+mkdir -p logs
+
+# Start the application
+pm2 start ecosystem.config.js
+
+# Save PM2 configuration
+pm2 save
+
+# Setup PM2 startup
+pm2 startup
+```
+
+### 6. Configure Nginx
+
+Create Nginx configuration:
+```bash
+sudo cat > /etc/nginx/sites-available/screenshot-saas << EOF
+server {
+    listen 80;
+    server_name yourdomain.com;
+    return 301 https://\$server_name\$request_uri;
+}
+
+server {
+    listen 443 ssl http2;
+    server_name yourdomain.com;
+
+    # SSL configuration
+    ssl_certificate /etc/letsencrypt/live/yourdomain.com/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/yourdomain.com/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
+    # Serve frontend static files
+    location / {
+        root /path/to/screenshot-saas/frontend/dist;
+        try_files \$uri \$uri/ /index.html;
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    # Proxy API requests to backend
+    location /api/ {
+        proxy_pass http://localhost:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+        proxy_cache_bypass \$http_upgrade;
+    }
+
+    # Proxy Socket.IO requests
+    location /socket.io/ {
+        proxy_pass http://localhost:8003;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+
+    # File upload size
+    client_max_body_size 100M;
+}
+EOF
+
+# Enable the site
+sudo ln -s /etc/nginx/sites-available/screenshot-saas /etc/nginx/sites-enabled/
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+### 7. Setup SSL Certificate
 
 ```bash
-# Deploy to production
-./deploy.sh deploy production
+# Install Certbot
+sudo apt install certbot python3-certbot-nginx -y
 
-# Test the deployment
-./deploy.sh test production
+# Obtain SSL certificate
+sudo certbot --nginx -d yourdomain.com
+
+# Test auto-renewal
+sudo certbot renew --dry-run
 ```
 
-## How to Use for Production
-
-This section provides step-by-step instructions for deploying to production with a custom domain like `https://screenshot.amazon.in`.
-
-### Step 1: Create Production Configuration
-
-Copy the production configuration template:
-```bash
-cp deploy.config.local.example.sh deploy.config.local.sh
-```
-
-### Step 2: Edit Configuration for Your Domain
-
-Edit `deploy.config.local.sh` with your production settings:
-
-```bash
-#!/bin/bash
-
-# Environment
-export DEPLOY_ENV="production"
-
-# Set your domain
-export PRODUCTION_DOMAIN="screenshot.amazon.in"
-export PRODUCTION_PROTOCOL="https"
-export PRODUCTION_PORT="8002"
-
-# Configure database (use your production MongoDB)
-export MONGODB_URI="mongodb://username:password@your-mongodb-server.com:27017/screenshot_saas_prod"
-
-# Set security credentials (IMPORTANT: Change these!)
-export JWT_SECRET="$(openssl rand -base64 64)"
-export ADMIN_EMAIL="admin@screenshot.amazon.in"
-export ADMIN_PASSWORD="$(openssl rand -base64 32)"
-
-# SSL certificate paths
-export SSL_CERT_PATH="/etc/letsencrypt/live/screenshot.amazon.in/fullchain.pem"
-export SSL_KEY_PATH="/etc/letsencrypt/live/screenshot.amazon.in/privkey.pem"
-```
-
-### Step 3: Deploy to Production
-
-Run the deployment command:
-```bash
-./deploy.sh deploy production
-```
-
-This will:
-- Load your production configuration
-- Create environment files for frontend and backend
-- Build the application (if needed)
-- Start the application with PM2
-- Configure URLs to use your domain
-
-### Step 4: Test the Deployment
-
-Verify everything is working:
-```bash
-./deploy.sh test production
-```
-
-This tests:
-- Health endpoint: `https://screenshot.amazon.in/health`
-- API endpoint: `https://screenshot.amazon.in/api/auth/login`
-- Frontend serving: `https://screenshot.amazon.in/`
-- WebSocket connection: `https://screenshot.amazon.in/socket.io/`
-
-### Step 5: Access Your Application
+### 8. Access Your Application
 
 Your application will be available at:
-- **URL**: `https://screenshot.amazon.in`
-- **Admin Login**: Use the credentials from your config
-- **API Base**: `https://screenshot.amazon.in/api/`
+- **URL**: `https://yourdomain.com`
+- **API Base**: `https://yourdomain.com/api/`
+- **Admin Login**: Create admin user via API or database
 
 ### Additional Commands
 

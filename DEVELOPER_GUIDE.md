@@ -3,6 +3,7 @@
 ## Table of Contents
 - [Overview](#overview)
 - [Architecture](#architecture)
+- [Current Features](#current-features)
 - [Setup & Installation](#setup--installation)
 - [Development Workflow](#development-workflow)
 - [UI/UX Design System](#uiux-design-system)
@@ -11,21 +12,61 @@
 - [Security Implementation](#security-implementation)
 - [Testing Strategy](#testing-strategy)
 - [Deployment Guide](#deployment-guide)
-- [Recent Updates](#recent-updates)
 - [Contributing Guidelines](#contributing-guidelines)
 
 ## Overview
 
-Screenshot SaaS is a modern web application built for automated screenshot capture and management. The application provides a comprehensive platform for users to create projects, capture screenshots with various configurations, manage collections, and handle user permissions.
+Screenshot SaaS is a production-ready Screenshot-as-a-Service platform built with modern technologies. The application provides comprehensive screenshot capture, management, and organization capabilities with advanced features including project management, role-based access control, API integration, and website crawling.
 
 ### Tech Stack
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
 - **Backend**: Node.js, Express.js, TypeScript
 - **Database**: MongoDB with Mongoose ODM
-- **Authentication**: JWT-based authentication
+- **Authentication**: JWT-based authentication with API tokens
 - **Real-time**: Socket.IO for progress updates
-- **Screenshot Engine**: Puppeteer
-- **UI Components**: Custom components with glass morphism design
+- **Screenshot Engine**: Playwright browser automation
+- **Queue System**: Agenda.js (MongoDB-based)
+- **UI Components**: Custom glassmorphism design with Lucide icons
+- **State Management**: Redux Toolkit with Redux Persist
+
+## Current Features
+
+### Core Screenshot Capabilities
+- **Single Screenshots**: Capture individual webpage screenshots with customizable options
+- **Frame Screenshots**: Time-based multi-frame captures at specified intervals (0-300 seconds)
+- **Website Crawling**: Automatic URL discovery and batch screenshot capture
+- **Auto-scroll Screenshots**: Capture long pages with automatic scrolling
+- **Collection Management**: Organize related screenshots into collections
+- **Real-time Progress**: Live updates via WebSocket for capture progress
+
+### Project Management
+- **Project Organization**: Group screenshots and collections by project
+- **Project Dashboard**: Overview with statistics and recent activity
+- **Project Settings**: Configurable project metadata and permissions
+- **Bulk Operations**: Mass delete, export, and management operations
+
+### User Management & Authentication
+- **Role-based Access**: Super Admin, Admin, and User roles with granular permissions
+- **JWT Authentication**: Secure token-based authentication system
+- **API Token System**: Programmatic access with secure API keys
+- **User Dashboard**: Account management and activity tracking
+- **Admin Panel**: Comprehensive user management for administrators
+
+### Advanced Features
+- **PDF Generation**: Export screenshots and collections as PDF documents
+- **ZIP Downloads**: Bulk download collections as compressed archives
+- **Image Processing**: Automatic thumbnail generation and optimization
+- **Queue System**: Async processing with Agenda.js job queue
+- **Configuration Management**: System-wide settings and limits
+- **Audit Logging**: Comprehensive activity tracking and monitoring
+
+### UI/UX Features
+- **Modern Glassmorphism Design**: Professional blue-indigo-slate theme
+- **Responsive Layout**: Mobile-first design with adaptive components
+- **Dark/Light Mode**: Theme switching with system preference detection
+- **Real-time Notifications**: Toast notifications and progress indicators
+- **Interactive Modals**: Full-screen image viewing and configuration dialogs
+- **Smooth Animations**: Butter-smooth hover effects and transitions
 
 ## Architecture
 
@@ -33,26 +74,27 @@ Screenshot SaaS is a modern web application built for automated screenshot captu
 ```
 src/
 ├── components/
-│   ├── layout/          # Layout components (DashboardLayout, etc.)
-│   ├── pages/           # Page components
-│   ├── modals/          # Modal components
-│   └── ui/              # Reusable UI components
-├── hooks/               # Custom React hooks
+│   ├── layout/          # Layout components (DashboardLayout)
+│   ├── pages/           # Page components (Dashboard, Projects, etc.)
+│   ├── modals/          # Modal components (AddScreenshot, PDF Config)
+│   └── ui/              # Reusable UI components (Button, GlassCard)
+├── hooks/               # Custom React hooks (useSocket, useProject)
 ├── lib/                 # Utilities and API client
-├── types/               # TypeScript type definitions
-└── styles/              # Global styles and Tailwind config
+├── store/               # Redux store and slices
+└── types/               # TypeScript type definitions
 ```
 
 ### Backend Architecture
 ```
 src/
-├── controllers/         # Request handlers
-├── models/             # Database models
-├── routes/             # API routes
-├── services/           # Business logic
-├── middleware/         # Custom middleware
-├── utils/              # Utility functions
-└── types/              # TypeScript interfaces
+├── controllers/         # Request handlers (screenshot, project, user)
+├── models/             # Database models (User, Project, Screenshot, Collection)
+├── routes/             # API routes (REST endpoints)
+├── services/           # Business logic (ScreenshotService)
+├── middleware/         # Custom middleware (auth, validation, error handling)
+├── utils/              # Utility functions (limits, admin creation)
+├── config/             # Configuration (database, agenda, logger)
+└── scripts/            # Migration and utility scripts
 ```
 
 ## Setup & Installation
@@ -88,16 +130,16 @@ Create `.env` files in both backend and frontend directories:
 **Backend (.env)**
 ```env
 NODE_ENV=development
-PORT=5000
+PORT=8003
 MONGODB_URI=mongodb://localhost:27017/screenshot-saas
 JWT_SECRET=your-super-secret-jwt-key
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
 ```
 
 **Frontend (.env)**
 ```env
-VITE_API_URL=http://localhost:5000/api
-VITE_WS_URL=http://localhost:5000
+VITE_API_URL=http://localhost:8003/api
+VITE_WS_URL=http://localhost:8003
 ```
 
 4. **Start Development Servers**
@@ -149,28 +191,35 @@ export function MyComponent({ title, onAction, className }: MyComponentProps) {
 ## UI/UX Design System
 
 ### Color Palette
-The application uses a professional blue-indigo-slate color system:
+The application uses a professional blue-indigo-slate color system with glassmorphism effects:
 
 ```css
 /* Primary Colors */
 --blue-500: #3b82f6
 --blue-600: #2563eb
+--blue-700: #1d4ed8
 --indigo-500: #6366f1
 --indigo-600: #4f46e5
+--indigo-700: #3730a3
 
 /* Neutral Colors */
 --slate-50: #f8fafc
 --slate-100: #f1f5f9
+--slate-200: #e2e8f0
 --slate-600: #475569
+--slate-700: #334155
+--slate-800: #1e293b
 --slate-900: #0f172a
 ```
 
 ### Design Principles
-1. **Glass Morphism**: Backdrop blur effects with transparency
-2. **Gradients**: Blue to indigo gradients for primary elements
-3. **Shadows**: Layered shadows for depth
-4. **Animations**: Smooth transitions (300ms duration)
-5. **Typography**: Clear hierarchy with slate colors
+1. **Glassmorphism**: Intense backdrop blur (20-40px) with gradient overlays
+2. **Professional Gradients**: Blue to indigo gradients with subtle opacity
+3. **Layered Shadows**: Multiple shadow layers for depth and elevation
+4. **Smooth Animations**: Butter-smooth transitions (200-700ms) with ease-out timing
+5. **Typography**: Clear hierarchy with slate colors and proper contrast
+6. **Compact Layouts**: Efficient space utilization with reduced padding
+7. **Hover Effects**: Dual shimmer effects and subtle transforms
 
 ### Component Patterns
 
@@ -197,30 +246,45 @@ The application uses a professional blue-indigo-slate color system:
 ## API Documentation
 
 ### Authentication
-All API endpoints require JWT authentication except for login/register.
-
-**Headers**
 ```
-Authorization: Bearer <jwt-token>
-Content-Type: application/json
+http://localhost:8003/api
 ```
 
-### Core Endpoints
+#### Authentication
+```
+POST   /api/auth/login        # User login
+POST   /api/auth/signup       # User registration
+POST   /api/auth/logout       # User logout
+```
 
 #### Projects
 ```
-GET    /api/projects          # Get user projects
-POST   /api/projects          # Create project
-GET    /api/projects/:id      # Get project details
-PUT    /api/projects/:id      # Update project
-DELETE /api/projects/:id      # Delete project
+GET    /api/projects                              # Get user projects
+POST   /api/projects                              # Create project
+GET    /api/projects/:id                          # Get project details
+PUT    /api/projects/:id                          # Update project
+DELETE /api/projects/:id                          # Delete project
+GET    /api/projects/:id/screenshots              # Get project screenshots
+GET    /api/projects/:id/collections              # Get project collections
+DELETE /api/projects/:projectId/collections/:collectionId  # Delete collection
+POST   /api/projects/:id/pdf                      # Generate project PDF
 ```
 
 #### Screenshots
 ```
-GET    /api/screenshots/:projectId    # Get project screenshots
-POST   /api/screenshots               # Create screenshot
-DELETE /api/screenshots/:id          # Delete screenshot
+POST   /api/screenshots                   # Create single screenshot
+POST   /api/screenshots/crawl             # Start website crawl
+POST   /api/screenshots/crawl/select      # Select URLs from crawl
+GET    /api/screenshots/:id               # Get screenshot details
+GET    /api/screenshots/collection/:id    # Get collection screenshots
+DELETE /api/screenshots/:id               # Delete screenshot
+DELETE /api/screenshots/collection/:id    # Delete collection
+```
+
+#### Collections
+```
+GET    /api/collections/:id/download      # Download collection as ZIP
+POST   /api/collections/:id/pdf           # Generate collection PDF
 ```
 
 #### Users (Admin only)
@@ -229,6 +293,29 @@ GET    /api/users             # Get all users
 POST   /api/users             # Create user
 PUT    /api/users/:id         # Update user
 DELETE /api/users/:id         # Delete user
+GET    /api/users/stats       # Get user statistics
+GET    /api/users/pending     # Get pending users
+PATCH  /api/users/:id/approve # Approve user
+```
+
+#### API Tokens
+```
+GET    /api/tokens            # Get user tokens
+POST   /api/tokens            # Create new token
+DELETE /api/tokens/:id        # Delete token
+```
+
+#### Configuration
+```
+GET    /api/configs           # Get system configs
+PUT    /api/configs           # Update configs
+PATCH  /api/configs/:id       # Update specific config
+```
+
+#### Images
+```
+GET    /api/images/:id        # Get screenshot image
+GET    /api/images/:id?type=thumbnail  # Get thumbnail
 ```
 
 #### API Keys
@@ -298,14 +385,28 @@ interface Project {
 interface Screenshot {
   _id: ObjectId
   projectId: ObjectId // ref: Project
-  userId: ObjectId // ref: User
   url: string
-  imagePath: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  imagePath?: string
+  thumbnailPath?: string
+  type: 'normal' | 'crawl' | 'frame' | 'scroll'
   collectionId?: ObjectId // ref: Collection
-  timeFrame?: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  errorMessage?: string
+  metadata?: {
+    title?: string
+    width?: number
+    height?: number
+    fileSize?: number
+    capturedAt?: Date
+    frameDelay?: number
+    frameIndex?: number
+    totalFrames?: number
+    scrollPosition?: number
+    scrollIndex?: number
+    isAutoScroll?: boolean
+    scrollType?: string
+  }
   createdAt: Date
-  updatedAt: Date
 }
 ```
 

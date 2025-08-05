@@ -570,9 +570,10 @@ export const deleteCollection = asyncHandler(async (req: Request, res: Response)
     throw createError('Collection not found', 404);
   }
 
-  // Verify ownership
+  // Verify ownership - super admins can delete any collection
   const project = collection.projectId as any;
-  if (project.userId.toString() !== userId) {
+  const userRole = req.user?.role;
+  if (userRole !== 'super_admin' && project.userId.toString() !== userId.toString()) {
     throw createError('Access denied', 403);
   }
 
