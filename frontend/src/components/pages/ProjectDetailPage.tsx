@@ -720,7 +720,8 @@ const ProjectDetailPage: React.FC = () => {
       <DashboardLayout title="Project Not Found" subtitle="The requested project could not be found">
         <div className="text-center py-12">
           <Button 
-            className="bg-gradient-to-r from-blue-500/90 to-indigo-500/90 hover:from-blue-600 hover:to-indigo-600 text-white border-none shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+            variant="outline"
+            className="transition-all duration-200 ease-out"
             onClick={() => navigate('/projects')}
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -741,7 +742,8 @@ const ProjectDetailPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button 
-              className="bg-gradient-to-r from-slate-500/90 to-gray-500/90 hover:from-slate-600 hover:to-gray-600 text-white border-none shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+              variant="outline"
+              className="transition-all duration-200 ease-out"
               onClick={() => navigate('/projects')}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -1144,7 +1146,7 @@ const ProjectDetailPage: React.FC = () => {
                           <>
                             <Button
                               size="sm"
-                              className="bg-gradient-to-r from-blue-500/90 to-indigo-500/90 hover:from-blue-600 hover:to-indigo-600 text-white border-none shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+                              className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-sm hover:shadow-md transition-all duration-200 ease-out"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDownloadZip(screenshot)
@@ -1155,7 +1157,7 @@ const ProjectDetailPage: React.FC = () => {
                             </Button>
                             <Button
                               size="sm"
-                              className="bg-gradient-to-r from-purple-500/90 to-pink-500/90 hover:from-purple-600 hover:to-pink-600 text-white border-none shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white border-none shadow-sm hover:shadow-md transition-all duration-200 ease-out"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setPdfCollection(screenshot)
@@ -1171,7 +1173,7 @@ const ProjectDetailPage: React.FC = () => {
                       
                       <Button
                         size="sm"
-                        className="bg-gradient-to-r from-red-500/90 to-rose-500/90 hover:from-red-600 hover:to-rose-600 text-white border-none shadow-lg hover:shadow-xl hover:shadow-red-500/25 backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+                        className="bg-red-600 hover:bg-red-700 text-white border-none shadow-sm hover:shadow-md transition-all duration-200 ease-out"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteScreenshot(screenshot)
@@ -1258,7 +1260,8 @@ const ProjectDetailPage: React.FC = () => {
               </p>
             <div className="flex justify-end space-x-3">
               <Button
-                className="bg-gradient-to-r from-slate-500/90 to-gray-500/90 hover:from-slate-600 hover:to-gray-600 text-white border-none shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+                variant="outline"
+                className="transition-all duration-200 ease-out"
                 onClick={() => {
                   setShowDeleteModal(false)
                   setScreenshotToDelete(null)
@@ -1267,7 +1270,7 @@ const ProjectDetailPage: React.FC = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-gradient-to-r from-red-500/90 to-rose-500/90 hover:from-red-600 hover:to-rose-600 text-white border-none shadow-lg hover:shadow-xl hover:shadow-red-500/25 backdrop-blur-sm transition-all duration-500 ease-out hover:scale-105 hover:-translate-y-0.5"
+                className="bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ease-out"
                 onClick={confirmDeleteScreenshot}
               >
                 Delete
