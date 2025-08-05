@@ -130,10 +130,10 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                   <Link
                     to={item.href}
                     className={cn(
-                      "flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-500 group relative overflow-hidden",
+                      "flex items-center space-x-3 px-3 py-2.5 rounded-xl transition-all duration-700 ease-out group relative overflow-hidden",
                       isActive
                         ? "bg-gradient-to-r from-white/70 via-white/60 to-white/50 dark:from-slate-700/80 dark:via-slate-800/70 dark:to-slate-900/60 backdrop-blur-[30px] border border-white/60 dark:border-slate-500/60 shadow-2xl text-slate-900 dark:text-white font-semibold transform scale-[1.02]"
-                        : "hover:bg-gradient-to-r hover:from-white/50 hover:via-white/40 hover:to-white/30 dark:hover:from-slate-800/70 dark:hover:via-slate-700/60 dark:hover:to-slate-800/50 hover:backdrop-blur-[25px] hover:border hover:border-white/40 dark:hover:border-slate-600/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:shadow-xl hover:transform hover:scale-[1.01] hover:-translate-y-0.5"
+                        : "hover:bg-gradient-to-r hover:from-white/50 hover:via-white/40 hover:to-white/30 dark:hover:from-slate-800/70 dark:hover:via-slate-700/60 dark:hover:to-slate-800/50 hover:backdrop-blur-[25px] hover:border hover:border-white/40 dark:hover:border-slate-600/40 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:shadow-xl hover:transform hover:scale-[1.015] hover:-translate-y-1 hover:translate-x-1"
                     )}
                   >
                     {/* Active indicator glow */}
@@ -146,10 +146,10 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                     
                     {/* Icon container */}
                     <div className={cn(
-                      "relative p-2 rounded-lg transition-all duration-500 group-hover:scale-110",
+                      "relative p-2 rounded-lg transition-all duration-700 ease-out group-hover:scale-125 group-hover:rotate-6",
                       isActive 
                         ? "bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg" 
-                        : "bg-slate-100/80 dark:bg-slate-700/80 group-hover:bg-gradient-to-br group-hover:from-blue-500/20 group-hover:to-indigo-500/20 group-hover:shadow-md"
+                        : "bg-slate-100/80 dark:bg-slate-700/80 group-hover:bg-gradient-to-br group-hover:from-blue-500/30 group-hover:to-indigo-500/30 group-hover:shadow-lg group-hover:shadow-blue-500/25"
                     )}>
                       <Icon className={cn("h-4 w-4 transition-all duration-500", 
                         isActive ? "text-white drop-shadow-sm" : "text-slate-600 dark:text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400"
@@ -171,9 +171,14 @@ export function DashboardLayout({ children, title, subtitle }: DashboardLayoutPr
                       <div className="absolute right-4 w-2 h-2 bg-gradient-to-r from-blue-400 to-indigo-500 rounded-full shadow-lg animate-pulse"></div>
                     )}
                     
-                    {/* Hover shimmer effect */}
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000"></div>
+                    {/* Enhanced Hover shimmer effect */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 ease-out">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/15 to-transparent -skew-x-12 transform translate-x-[-120%] group-hover:translate-x-[220%] transition-transform duration-1200 ease-out"></div>
+                    </div>
+                    
+                    {/* Secondary shimmer for extra smoothness */}
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-60 transition-opacity duration-500 delay-100">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-blue-200/10 to-transparent -skew-x-6 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 ease-out"></div>
                     </div>
                   </Link>
                   
