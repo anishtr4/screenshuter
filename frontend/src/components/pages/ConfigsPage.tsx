@@ -9,8 +9,7 @@ import {
   Globe,
   Shield,
   Clock,
-  HardDrive,
-  Settings
+  HardDrive
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -235,21 +234,8 @@ export function ConfigsPage() {
   return (
     <DashboardLayout title="Configs" subtitle="System configuration and settings">
       <div className="space-y-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center space-x-4">
-            <div className="p-3 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl shadow-lg">
-              <Settings className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                System Configuration
-              </h1>
-              <p className="text-slate-600 dark:text-slate-400 mt-1">
-                Manage application settings and configuration
-              </p>
-            </div>
-          </div>
+        {/* Header Actions */}
+        <div className="flex items-center justify-end">
           <div className="flex items-center space-x-3">
             <Button
               variant="outline"
@@ -280,17 +266,34 @@ export function ConfigsPage() {
           </div>
         </div>
 
-        {/* Config Sections */}
+        {/* Enhanced Config Sections */}
         {loading ? (
           <div className="grid gap-6">
             {[...Array(3)].map((_, i) => (
-              <div key={i} className="animate-pulse">
-                <div className="rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 p-6">
-                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded-lg mb-4"></div>
-                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded-lg mb-6 w-2/3"></div>
+              <div key={i} className="group">
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/80 to-slate-50/60 dark:from-slate-800/80 dark:to-slate-900/60 backdrop-blur-xl border border-white/40 dark:border-slate-700/40 shadow-xl p-6">
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12 animate-shimmer"></div>
+                  
+                  <div className="flex items-start space-x-4 mb-6">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-200 to-indigo-300 dark:from-blue-600 dark:to-indigo-700 rounded-xl animate-pulse"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="w-1/3 h-5 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      <div className="w-2/3 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                    </div>
+                  </div>
+                  
                   <div className="space-y-4">
-                    <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-                    <div className="h-12 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
+                    {[...Array(2)].map((_, j) => (
+                      <div key={j} className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-xl bg-white/50 dark:bg-slate-800/50">
+                        <div className="space-y-1">
+                          <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                          <div className="w-28 h-3 bg-slate-200 dark:bg-slate-700 rounded animate-pulse"></div>
+                        </div>
+                        <div className="w-full h-10 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                        <div className="w-16 h-8 bg-slate-200 dark:bg-slate-700 rounded-lg animate-pulse"></div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -301,35 +304,41 @@ export function ConfigsPage() {
             {configs.map((section) => {
               const Icon = section.icon
               return (
-                <div key={section.id} className="group relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl shadow-xl border border-slate-200/40 dark:border-slate-700/40 hover:shadow-2xl transition-all duration-300">
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-slate-50/50 to-transparent dark:from-slate-800/50"></div>
-                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-500/10 to-transparent rounded-full blur-xl"></div>
+                <div key={section.id} className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-white/70 via-white/60 to-slate-50/50 dark:from-slate-800/70 dark:via-slate-800/60 dark:to-slate-900/50 backdrop-blur-[30px] shadow-2xl border border-white/50 dark:border-slate-600/50 hover:shadow-3xl transition-all duration-500 hover:scale-[1.01] hover:-translate-y-1">
+                  {/* Stunning Background Effects */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/8 via-transparent to-indigo-500/8"></div>
+                  <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-400/20 via-indigo-400/15 to-transparent rounded-full blur-2xl group-hover:blur-3xl transition-all duration-500"></div>
+                  <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-gradient-to-tr from-indigo-400/15 via-blue-400/10 to-transparent rounded-full blur-xl group-hover:blur-2xl transition-all duration-500"></div>
+                  
+                  {/* Hover shimmer effect */}
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 transform translate-x-[-100%] group-hover:translate-x-[200%] transition-transform duration-1000 rounded-3xl"></div>
+                  </div>
                   
                   <div className="relative p-6">
-                    <div className="flex items-center space-x-4 mb-6">
-                      <div className="p-3 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
-                        <Icon className="h-6 w-6 text-white" />
+                    <div className="flex items-center space-x-3 mb-5">
+                      <div className="p-2.5 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg group-hover:scale-110 transition-transform duration-300">
+                        <Icon className="h-5 w-5 text-white" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                           {section.title}
                         </h3>
-                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                        <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
                           {section.description}
                         </p>
                       </div>
                     </div>
                     
-                    <div className="grid gap-6">
+                    <div className="grid gap-4">
                       {section.settings.map((setting) => (
-                        <div key={setting.key} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start p-4 rounded-xl bg-slate-50/50 dark:bg-slate-800/50 border border-slate-200/30 dark:border-slate-700/30">
-                          <div>
-                            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                        <div key={setting.key} className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start p-4 rounded-xl bg-gradient-to-r from-white/60 to-white/40 dark:from-slate-700/60 dark:to-slate-800/40 backdrop-blur-sm border border-white/30 dark:border-slate-600/30 hover:border-white/50 dark:hover:border-slate-500/50 transition-all duration-300 hover:shadow-lg">
+                          <div className="space-y-1">
+                            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
                               {setting.label}
                             </label>
                             {setting.description && (
-                              <p className="text-xs text-slate-500 dark:text-slate-400">
+                              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
                                 {setting.description}
                               </p>
                             )}

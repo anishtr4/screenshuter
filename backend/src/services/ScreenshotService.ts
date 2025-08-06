@@ -2,7 +2,7 @@ import { chromium, Browser, Page } from 'playwright';
 import path from 'path';
 import fs from 'fs/promises';
 import sharp from 'sharp';
-import { Screenshot } from '../models/Screenshot';
+import { Screenshot, IScreenshot } from '../models/Screenshot';
 import { Collection } from '../models/Collection';
 import { logger } from '../config/logger';
 import { io } from '../index';
@@ -15,6 +15,34 @@ export interface ScreenshotJobData {
   type: 'normal' | 'crawl';
   collectionId?: string;
   collectionName?: string;
+  // Screenshot options
+  cookiePrevention?: boolean;
+  deviceScaleFactor?: number;
+  customCSS?: string;
+  customJS?: string;
+  // Authentication options
+  basicAuth?: {
+    username: string;
+    password: string;
+  };
+  // Cookie injection
+  customCookies?: Array<{
+    name: string;
+    value: string;
+    domain?: string;
+    path?: string;
+    expires?: number;
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: 'Strict' | 'Lax' | 'None';
+  }>;
+  // Trigger selectors for interactive screenshots
+  triggerSelectors?: Array<{
+    selector: string;
+    delay: number; // milliseconds to wait before clicking
+    waitAfter: number; // milliseconds to wait after clicking before screenshot
+    description?: string; // optional description for the action
+  }>;
 }
 
 export interface CrawlJobData {
@@ -22,6 +50,27 @@ export interface CrawlJobData {
   urls: string[];
   projectId: string;
   userId: string;
+  // Screenshot options
+  cookiePrevention?: boolean;
+  deviceScaleFactor?: number;
+  customCSS?: string;
+  customJS?: string;
+  // Authentication options
+  basicAuth?: {
+    username: string;
+    password: string;
+  };
+  // Cookie injection
+  customCookies?: Array<{
+    name: string;
+    value: string;
+    domain?: string;
+    path?: string;
+    expires?: number;
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: 'Strict' | 'Lax' | 'None';
+  }>;
 }
 
 export interface FrameScreenshotJobData {
@@ -40,6 +89,27 @@ export interface FrameScreenshotJobData {
   };
   isScrollCapture?: boolean;
   scrollPosition?: number;
+  // Screenshot options
+  cookiePrevention?: boolean;
+  deviceScaleFactor?: number;
+  customCSS?: string;
+  customJS?: string;
+  // Authentication options
+  basicAuth?: {
+    username: string;
+    password: string;
+  };
+  // Cookie injection
+  customCookies?: Array<{
+    name: string;
+    value: string;
+    domain?: string;
+    path?: string;
+    expires?: number;
+    httpOnly?: boolean;
+    secure?: boolean;
+    sameSite?: 'Strict' | 'Lax' | 'None';
+  }>;
 }
 
 export class ScreenshotService {
@@ -101,8 +171,431 @@ export class ScreenshotService {
     return this.browser;
   }
 
+  private async configurePageForScreenshot(page: Page, options?: {
+    cookiePrevention?: boolean;
+    deviceScaleFactor?: number;
+    customCSS?: string;
+    customJS?: string;
+    basicAuth?: {
+      username: string;
+      password: string;
+    };
+    customCookies?: Array<{
+      name: string;
+      value: string;
+      domain?: string;
+      path?: string;
+      expires?: number;
+      httpOnly?: boolean;
+      secure?: boolean;
+      sameSite?: 'Strict' | 'Lax' | 'None';
+    }>;
+    triggerSelectors?: Array<{
+      selector: string;
+      delay: number;
+      waitAfter: number;
+      description?: string;
+    }>;
+  }): Promise<void> {
+    // Get options with defaults
+    const {
+      cookiePrevention = process.env.COOKIE_PREVENTION_ENABLED === 'true' || true,
+      deviceScaleFactor = parseFloat(process.env.DEVICE_SCALE_FACTOR || '2'),
+      customCSS = '',
+      customJS = '',
+      basicAuth,
+      customCookies
+    } = options || {};
+    
+    // Set viewport size and media emulation
+    await page.setViewportSize({ 
+      width: 1920, 
+      height: 1080 
+    });
+    
+    // Set media emulation for consistent screenshots
+    await page.emulateMedia({ 
+      media: 'screen',
+      reducedMotion: 'reduce' // Reduce animations for consistent screenshots
+    });
+    
+    // Note: Device scale factor should be set when creating the browser context
+    // For now, we'll log the intended scale factor
+    if (deviceScaleFactor !== 2) {
+      logger.info(`Device scale factor ${deviceScaleFactor} requested (applied at context level)`);
+    }
+    
+    await page.setExtraHTTPHeaders({
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    });
+
+    // Set up HTTP Basic Authentication if provided
+    if (basicAuth) {
+      await page.setExtraHTTPHeaders({
+        'Authorization': `Basic ${Buffer.from(`${basicAuth.username}:${basicAuth.password}`).toString('base64')}`
+      });
+    }
+
+    // Inject custom cookies if provided
+    if (customCookies && customCookies.length > 0) {
+      try {
+        // Convert custom cookies to Playwright format
+        const playwrightCookies = customCookies.map(cookie => ({
+          name: cookie.name,
+          value: cookie.value,
+          domain: cookie.domain || new URL(page.url() || 'http://localhost').hostname,
+          path: cookie.path || '/',
+          ...(cookie.expires !== undefined && { expires: cookie.expires }),
+          httpOnly: cookie.httpOnly || false,
+          secure: cookie.secure || false,
+          sameSite: cookie.sameSite || 'Lax' as 'Strict' | 'Lax' | 'None'
+        }));
+        
+        await page.context().addCookies(playwrightCookies);
+        logger.info(`Injected ${customCookies.length} custom cookies`);
+      } catch (error) {
+        logger.warn('Failed to inject custom cookies:', error);
+      }
+    }
+
+    // Check if cookie prevention is enabled
+    const cookiePreventionEnabled = cookiePrevention;
+    
+    if (cookiePreventionEnabled) {
+      // Block cookies and related storage
+      await page.context().addInitScript(`
+        // Override document.cookie
+        Object.defineProperty(document, 'cookie', {
+          get: () => '',
+          set: () => {},
+          configurable: false
+        });
+        
+        // Override localStorage
+        Object.defineProperty(window, 'localStorage', {
+          value: {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+            clear: () => {},
+            key: () => null,
+            length: 0
+          },
+          configurable: false
+        });
+        
+        // Override sessionStorage
+        Object.defineProperty(window, 'sessionStorage', {
+          value: {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {},
+            clear: () => {},
+            key: () => null,
+            length: 0
+          },
+          configurable: false
+        });
+        
+        // Override indexedDB
+        Object.defineProperty(window, 'indexedDB', {
+          value: null,
+          configurable: false
+        });
+      `);
+
+      // Block cookie-related requests and common cookie consent scripts
+      await page.route('**/*', async (route) => {
+        const url = route.request().url();
+        const resourceType = route.request().resourceType();
+        
+        // Block known cookie consent services and tracking scripts
+        const blockedDomains = [
+          'cookiebot.com',
+          'cookiepro.com',
+          'onetrust.com',
+          'trustarc.com',
+          'cookielaw.org',
+          'cookieinformation.com',
+          'quantcast.com',
+          'google-analytics.com',
+          'googletagmanager.com',
+          'facebook.com/tr',
+          'connect.facebook.net',
+          'hotjar.com',
+          'fullstory.com',
+          'mixpanel.com',
+          'segment.com',
+          'intercom.io'
+        ];
+        
+        // Check if URL contains blocked domains
+        const shouldBlock = blockedDomains.some(domain => url.includes(domain));
+        
+        if (shouldBlock) {
+          logger.debug(`Blocked cookie/tracking request: ${url}`);
+          await route.abort();
+          return;
+        }
+        
+        // Block specific cookie consent script patterns
+        if (resourceType === 'script') {
+          const cookieScriptPatterns = [
+            /cookie[_-]?consent/i,
+            /cookie[_-]?banner/i,
+            /cookie[_-]?notice/i,
+            /gdpr[_-]?consent/i,
+            /privacy[_-]?consent/i,
+            /consent[_-]?manager/i,
+            /cookielaw/i,
+            /onetrust/i
+          ];
+          
+          if (cookieScriptPatterns.some(pattern => pattern.test(url))) {
+            logger.debug(`Blocked cookie consent script: ${url}`);
+            await route.abort();
+            return;
+          }
+        }
+        
+        // Continue with the request if not blocked
+        await route.continue();
+      });
+
+      // Inject CSS to hide common cookie consent elements
+      await page.addStyleTag({
+        content: `
+          /* Hide common cookie consent selectors */
+          [id*="cookie"],
+          [class*="cookie"],
+          [id*="consent"],
+          [class*="consent"],
+          [id*="gdpr"],
+          [class*="gdpr"],
+          [id*="privacy"],
+          [class*="privacy"],
+          .cookie-banner,
+          .cookie-notice,
+          .cookie-consent,
+          .consent-banner,
+          .gdpr-banner,
+          .privacy-banner,
+          #cookieNotice,
+          #cookieBanner,
+          #cookieConsent,
+          #gdprConsent,
+          #privacyConsent,
+          .CookieConsent,
+          .cookielaw-banner,
+          .onetrust-banner-sdk,
+          .ot-sdk-container,
+          .trustarc-banner,
+          .truste-banner,
+          .cookiebot-banner,
+          .cookiepro-banner,
+          [data-testid*="cookie"],
+          [data-testid*="consent"],
+          [aria-label*="cookie" i],
+          [aria-label*="consent" i],
+          [role="dialog"][aria-describedby*="cookie"],
+          [role="dialog"][aria-describedby*="consent"],
+          .cc-banner,
+          .cc-window,
+          .cookie-alert,
+          .consent-modal,
+          .privacy-modal {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            height: 0 !important;
+            width: 0 !important;
+            position: absolute !important;
+            left: -9999px !important;
+            top: -9999px !important;
+            z-index: -1 !important;
+          }
+          
+          /* Remove overlay backgrounds that might block content */
+          .cookie-overlay,
+          .consent-overlay,
+          .gdpr-overlay,
+          .privacy-overlay {
+            display: none !important;
+          }
+          
+          /* Ensure body is not blocked by cookie consent */
+          body {
+            overflow: auto !important;
+            position: static !important;
+          }
+        `
+      });
+
+      logger.info('Cookie prevention configured for page');
+    }
+
+    // Inject custom CSS if provided
+    if (customCSS && customCSS.trim()) {
+      await page.addStyleTag({
+        content: customCSS
+      });
+      logger.info('Custom CSS injected');
+    }
+
+    // Inject custom JavaScript if provided
+    if (customJS && customJS.trim()) {
+      await page.addScriptTag({
+        content: customJS
+      });
+      logger.info('Custom JavaScript injected');
+    }
+  }
+
+  /**
+   * Execute trigger selectors and capture screenshots for each interaction
+   */
+  private async executeTriggerSelectors(
+    page: Page, 
+    triggerSelectors: Array<{
+      selector: string;
+      delay: number;
+      waitAfter: number;
+      description?: string;
+    }>,
+    screenshotId: string,
+    projectId: string,
+    userId: string
+  ): Promise<IScreenshot[]> {
+    const screenshots: IScreenshot[] = [];
+    
+    logger.info(`🎯 Executing ${triggerSelectors.length} trigger selectors for screenshot ${screenshotId}`);
+    
+    for (let i = 0; i < triggerSelectors.length; i++) {
+      const trigger = triggerSelectors[i];
+      if (!trigger) continue;
+      
+      try {
+        logger.info(`🎯 Trigger ${i + 1}/${triggerSelectors.length}: ${trigger.description || trigger.selector}`);
+        
+        // Wait for the delay before clicking
+        if (trigger.delay > 0) {
+          logger.info(`⏳ Waiting ${trigger.delay}ms before clicking ${trigger.selector}`);
+          await page.waitForTimeout(trigger.delay);
+        }
+        
+        // Check if element exists
+        const element = await page.$(trigger.selector);
+        if (!element) {
+          logger.warn(`⚠️ Element not found: ${trigger.selector}`);
+          continue;
+        }
+        
+        // Click the element
+        logger.info(`🖱️ Clicking element: ${trigger.selector}`);
+        await element.click();
+        
+        // Wait after clicking
+        if (trigger.waitAfter > 0) {
+          logger.info(`⏳ Waiting ${trigger.waitAfter}ms after clicking ${trigger.selector}`);
+          await page.waitForTimeout(trigger.waitAfter);
+        }
+        
+        // Capture screenshot after the interaction
+        const triggerScreenshotId = `${screenshotId}_trigger_${i + 1}`;
+        const screenshotBuffer = await page.screenshot({ 
+          fullPage: true,
+          type: 'png'
+        });
+        
+        // Save screenshot to file
+        const filename = `${triggerScreenshotId}.png`;
+        const filepath = path.join(this.screenshotsDir, filename);
+        await fs.writeFile(filepath, screenshotBuffer);
+        
+        // Create screenshot document with proper ObjectId
+        const screenshot = new Screenshot({
+          // Let MongoDB generate the ObjectId automatically
+          url: page.url(),
+          imagePath: `/uploads/screenshots/${filename}`,
+          status: 'completed',
+          type: 'normal', // Add required type field (trigger screenshots are normal type)
+          projectId,
+          metadata: {
+            title: trigger.description || `Trigger ${i + 1}: ${trigger.selector}`,
+            timestamp: new Date().toISOString(),
+            // Flatten trigger information for frontend compatibility
+            triggerSelector: trigger.selector,
+            triggerDescription: trigger.description,
+            triggerIndex: i,
+            totalTriggers: triggerSelectors.length,
+            parentScreenshotId: screenshotId,
+            // Legacy nested format for backward compatibility
+            triggerInfo: {
+              selector: trigger.selector,
+              description: trigger.description,
+              triggerIndex: i + 1,
+              totalTriggers: triggerSelectors.length,
+              parentScreenshotId: screenshotId
+            }
+          }
+        });
+        
+        await screenshot.save();
+        screenshots.push(screenshot.toObject());
+        
+        // Use the actual screenshot ID after save
+        const actualScreenshotId = screenshot._id.toString();
+        logger.info(`✅ Trigger screenshot ${i + 1} captured: ${actualScreenshotId}`);
+        logger.info(`📊 Screenshot saved to database with ID: ${actualScreenshotId}`);
+        
+        // Emit socket event for real-time updates
+        logger.info(`🔔 Emitting screenshotCompleted event for: ${actualScreenshotId}`);
+        io.emit('screenshotCompleted', {
+          screenshotId: actualScreenshotId,
+          projectId,
+          screenshot: screenshot.toObject()
+        });
+        
+      } catch (error) {
+        logger.error(`❌ Error executing trigger ${i + 1} (${trigger.selector}):`, error);
+        // Continue with next trigger even if one fails
+        continue;
+      }
+    }
+    
+    logger.info(`🎯 Completed trigger selectors. Generated ${screenshots.length} screenshots.`);
+    return screenshots;
+  }
+
   async captureScreenshot(data: ScreenshotJobData): Promise<void> {
-    const { screenshotId, url, userId, type, collectionId, collectionName } = data;
+    const { 
+      screenshotId, 
+      url, 
+      userId, 
+      projectId,
+      type, 
+      collectionId, 
+      collectionName,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies
+    } = data;
+    
+    // Extract trigger selectors for interactive screenshots
+    const { triggerSelectors } = data;
+    
+    // DEBUG: Track function calls to detect duplicates
+    logger.info(`🔥 captureScreenshot STARTED for screenshotId: ${screenshotId}`, {
+      screenshotId,
+      url,
+      userId,
+      type,
+      collectionId,
+      timestamp: new Date().toISOString()
+    });
     
     // Create metadata for collection screenshots
     const metadata = collectionId ? {
@@ -147,10 +640,14 @@ export class ScreenshotService {
         metadata
       });
 
-      // Set viewport and user agent
-      await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.setExtraHTTPHeaders({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      // Configure page with cookie prevention and other settings
+      await this.configurePageForScreenshot(page, {
+        ...(cookiePrevention !== undefined && { cookiePrevention }),
+        ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+        ...(customCSS !== undefined && { customCSS }),
+        ...(customJS !== undefined && { customJS }),
+        ...(basicAuth !== undefined && { basicAuth }),
+        ...(customCookies !== undefined && { customCookies })
       });
 
       // Emit progress: navigating to URL
@@ -217,12 +714,41 @@ export class ScreenshotService {
       const imagePath = path.join(screenshotDir, 'full.png');
       const thumbnailPath = path.join(screenshotDir, 'thumbnail.png');
 
+      // Execute trigger selectors if provided (only for individual screenshots, not collections)
+      let triggerScreenshots: IScreenshot[] = [];
+      if (triggerSelectors && triggerSelectors.length > 0 && !collectionId) {
+        logger.info(`🎯 Executing ${triggerSelectors.length} trigger selectors before main screenshot`);
+        
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 60,
+          stage: `Executing ${triggerSelectors.length} trigger actions...`,
+          metadata
+        });
+        
+        try {
+          triggerScreenshots = await this.executeTriggerSelectors(
+            page,
+            triggerSelectors,
+            screenshotId,
+            projectId,
+            userId
+          );
+          
+          logger.info(`✅ Generated ${triggerScreenshots.length} trigger screenshots`);
+        } catch (error) {
+          logger.error('❌ Error executing trigger selectors:', error);
+          // Continue with main screenshot even if triggers fail
+        }
+      }
+
       // Emit progress: taking screenshot
       io.to(`user-${userId}`).emit('screenshot-progress', {
         screenshotId,
         status: 'processing',
         progress: 70,
-        stage: 'Capturing screenshot...',
+        stage: 'Capturing main screenshot...',
         metadata
       });
 
@@ -258,7 +784,7 @@ export class ScreenshotService {
         ? `uploads/collections/${collectionId}/${screenshotId}`
         : `uploads/screenshots/${screenshotId}`;
 
-      await Screenshot.findByIdAndUpdate(screenshotId, {
+      const updatedScreenshot = await Screenshot.findByIdAndUpdate(screenshotId, {
         status: 'completed',
         imagePath: `${relativePath}/full.png`,
         thumbnailPath: `${relativePath}/thumbnail.png`,
@@ -269,7 +795,7 @@ export class ScreenshotService {
           fileSize: stats.size,
           capturedAt: new Date()
         }
-      });
+      }, { new: true }); // Return the updated document
 
       // Emit completion progress
       io.to(`user-${userId}`).emit('screenshot-progress', {
@@ -277,13 +803,18 @@ export class ScreenshotService {
         status: 'completed',
         progress: 100,
         stage: 'Screenshot completed!',
+        url, // Add URL for frontend to create complete screenshot object
         imagePath: `${relativePath}/full.png`,
         thumbnailPath: `${relativePath}/thumbnail.png`,
+        createdAt: updatedScreenshot?.createdAt, // Add actual creation date for consistency
+        type: updatedScreenshot?.type, // Add type for frontend filtering
+        collectionId: updatedScreenshot?.collectionId, // Add collectionId for frontend filtering
         metadata: {
           title,
           width: imageInfo.width,
           height: imageInfo.height,
           fileSize: stats.size,
+          capturedAt: new Date(),
           ...(metadata || {})
         }
       });
@@ -313,48 +844,81 @@ export class ScreenshotService {
     }
   }
 
-  async captureFrameScreenshot(data: FrameScreenshotJobData): Promise<void> {
+  async captureFrameScreenshot(data: any): Promise<void> {
     // Debug logging for received job data
     logger.info(`📬 Frame job received`, {
-      screenshotId: data.screenshotId,
+      collectionId: data.collectionId,
       frameIndex: data.frameIndex,
       autoScroll: data.autoScroll,
       autoScrollEnabled: data.autoScroll?.enabled,
       isScrollCapture: data.isScrollCapture
     });
     
-    const { screenshotId, url, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture, projectId } = data;
+    const { 
+      collectionId, 
+      url, 
+      userId, 
+      frameDelay, 
+      frameIndex, 
+      totalFrames, 
+      autoScroll, 
+      isScrollCapture, 
+      projectId,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies
+    } = data;
+    
+    let screenshotId: string | undefined;
     
     try {
-      // Update status to processing
-      await Screenshot.findByIdAndUpdate(screenshotId, { 
-        status: 'processing' 
-      });
-
-      // Emit initial progress
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
+      // Create the screenshot record (similar to crawl approach)
+      const newScreenshot = new Screenshot({
+        projectId,
+        url,
+        imagePath: '', // Will be updated when captured
+        type: 'frame',
+        collectionId,
         status: 'processing',
-        progress: 0,
-        stage: `Capturing frame ${frameIndex}/${totalFrames} at ${frameDelay}s...`
+        metadata: {
+          frameDelay,
+          frameIndex,
+          totalFrames
+        }
       });
+      
+      await newScreenshot.save();
+      screenshotId = newScreenshot._id.toString();
+
+      // No individual screenshot progress - only collection progress
+      // This prevents individual progress indicators from showing
 
       const browser = await this.getBrowser();
       const page = await browser.newPage();
 
-      // Set viewport and user agent
-      await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.setExtraHTTPHeaders({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      // Configure page with cookie prevention and other settings
+      await this.configurePageForScreenshot(page, {
+        ...(cookiePrevention !== undefined && { cookiePrevention }),
+        ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+        ...(customCSS !== undefined && { customCSS }),
+        ...(customJS !== undefined && { customJS }),
+        ...(basicAuth !== undefined && { basicAuth }),
+        ...(customCookies !== undefined && { customCookies })
       });
 
       // Emit progress: navigating to URL
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'processing',
-        progress: 20,
-        stage: `Loading ${url}...`
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 20,
+          stage: `Loading ${url}...`
+        });
+      }
 
       // Navigate to the URL
       await page.goto(url, { 
@@ -364,31 +928,45 @@ export class ScreenshotService {
 
       // Wait for the specified frame delay
       if (frameDelay > 0) {
-        io.to(`user-${userId}`).emit('screenshot-progress', {
-          screenshotId,
-          status: 'processing',
-          progress: 40,
-          stage: `Waiting ${frameDelay}s for frame timing...`
-        });
+        // Ensure screenshotId is defined before using it in emit
+        if (screenshotId) {
+          io.to(`user-${userId}`).emit('screenshot-progress', {
+            screenshotId,
+            status: 'processing',
+            progress: 40,
+            stage: `Waiting ${frameDelay}s for frame timing...`
+          });
+        }
         
         await page.waitForTimeout(frameDelay * 1000);
       }
 
       // Emit progress: taking screenshot
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'processing',
-        progress: 60,
-        stage: 'Taking screenshot...'
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 60,
+          stage: 'Taking screenshot...'
+        });
+      }
 
       // Get the screenshot document to find collectionId
+      // Ensure screenshotId is defined before querying database
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const screenshot = await Screenshot.findById(screenshotId);
       if (!screenshot) {
         throw new Error('Screenshot not found');
       }
 
       // Create directory for this screenshot
+      // Ensure screenshotId is defined before using it
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const screenshotDir = await this.ensureScreenshotDirectory(screenshotId, screenshot.collectionId?.toString());
       
       // Take the screenshot
@@ -400,12 +978,15 @@ export class ScreenshotService {
       });
 
       // Emit progress: processing image
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'processing',
-        progress: 80,
-        stage: 'Processing image...'
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 80,
+          stage: 'Processing image...'
+        });
+      }
 
       // Create thumbnail
       const thumbnailPath = path.join(screenshotDir, 'thumbnail.jpg');
@@ -415,29 +996,52 @@ export class ScreenshotService {
         .toFile(thumbnailPath);
 
       // Update screenshot with paths (include uploads/ prefix for image controller)
+      // Ensure screenshotId is defined before using it
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const relativePath = screenshot.collectionId 
         ? path.join('uploads', 'collections', screenshot.collectionId.toString(), screenshotId, 'screenshot.png')
         : path.join('uploads', 'screenshots', screenshotId, 'screenshot.png');
       
+      // Ensure screenshotId is defined before using it
+      if (!screenshotId) {
+        throw new Error('Screenshot ID is undefined');
+      }
       const relativeThumbnailPath = screenshot.collectionId 
         ? path.join('uploads', 'collections', screenshot.collectionId.toString(), screenshotId, 'thumbnail.jpg')
         : path.join('uploads', 'screenshots', screenshotId, 'thumbnail.jpg');
 
-      await Screenshot.findByIdAndUpdate(screenshotId, {
+      const updatedScreenshot = await Screenshot.findByIdAndUpdate(screenshotId, {
         imagePath: relativePath,
         thumbnailPath: relativeThumbnailPath,
         status: 'completed'
-      });
+      }, { new: true }); // Return the updated document
 
       await page.close();
 
       // Emit completion
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'completed',
-        progress: 100,
-        stage: `Frame ${frameIndex}/${totalFrames} completed!`
-      });
+      // Ensure screenshotId is defined before using it in emit
+      if (screenshotId) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'completed',
+          progress: 100,
+          stage: `Frame ${frameIndex}/${totalFrames} completed!`,
+          url: updatedScreenshot?.url || url, // Add URL for frontend
+          type: updatedScreenshot?.type, // Add type for filtering
+          collectionId: updatedScreenshot?.collectionId, // Add collectionId for filtering
+          createdAt: updatedScreenshot?.createdAt, // Add creation date for consistency
+          imagePath: relativePath,
+          thumbnailPath: relativeThumbnailPath,
+          metadata: {
+            title: updatedScreenshot?.metadata?.title || 'Frame Screenshot',
+            frameIndex,
+            totalFrames,
+            frameDelay
+          }
+        });
+      }
 
       // Update collection progress
       if (screenshot.collectionId) {
@@ -451,13 +1055,87 @@ export class ScreenshotService {
         const progress = Math.round((completedTimeFrames / totalFrames) * 100);
         
         // Emit collection progress update
-        io.to(`user-${userId}`).emit('collection-progress', {
+        const collectionProgressData = {
           collectionId: screenshot.collectionId.toString(),
           totalScreenshots: totalFrames,
           completedScreenshots: completedTimeFrames,
           progress,
-          stage: `Captured ${completedTimeFrames}/${totalFrames} frames`
+          stage: `Captured ${completedTimeFrames}/${totalFrames} frames`,
+          url: screenshot.url,
+          type: 'frame' as const,
+          startTime: Date.now()
+        };
+        
+        logger.info(`📡 Emitting collection progress`, {
+          userId,
+          collectionProgressData,
+          hasUrl: !!collectionProgressData.url,
+          hasType: !!collectionProgressData.type
         });
+        
+        io.to(`user-${userId}`).emit('collection-progress', collectionProgressData);
+        
+        // Debug completion condition
+        logger.info(`🔍 Checking completion condition`, {
+          progress,
+          completedTimeFrames,
+          totalFrames,
+          completedGreaterOrEqual: completedTimeFrames >= totalFrames,
+          hasCollectionId: !!screenshot.collectionId,
+          shouldComplete: completedTimeFrames >= totalFrames && screenshot.collectionId
+        });
+        
+        // Check if collection is fully completed (all frames done)
+        // Use >= 100 to handle rounding issues and simplify autoScroll check
+        if (completedTimeFrames >= totalFrames && screenshot.collectionId) {
+          logger.info(`✅ Collection fully completed`, {
+            collectionId: screenshot.collectionId.toString(),
+            completedTimeFrames,
+            totalFrames
+          });
+          
+          // Update collection with completed status and refresh timestamp
+          await Collection.findByIdAndUpdate(screenshot.collectionId, {
+            status: 'completed',
+            updatedAt: new Date() // This ensures it appears first in sorted list
+          });
+          
+          // Emit final completion event to clear progress state
+          const completionData = {
+            collectionId: screenshot.collectionId.toString(),
+            totalScreenshots: totalFrames,
+            completedScreenshots: totalFrames,
+            progress: 100,
+            stage: 'Collection completed!',
+            url: screenshot.url,
+            type: 'frame' as const,
+            startTime: Date.now(),
+            completed: true // Flag to indicate completion
+          };
+          
+          logger.info(`🎉 Emitting final completion event`, {
+            userId,
+            completionData,
+            room: `user-${userId}`
+          });
+          
+          io.to(`user-${userId}`).emit('collection-progress', completionData);
+          
+          // Clear progress after a short delay to allow UI to show completion
+          setTimeout(() => {
+            if (screenshot.collectionId) {
+              logger.info(`🧹 Emitting collection progress clear event`, {
+                userId,
+                collectionId: screenshot.collectionId.toString(),
+                room: `user-${userId}`
+              });
+              
+              io.to(`user-${userId}`).emit('collection-progress-clear', {
+                collectionId: screenshot.collectionId.toString()
+              });
+            }
+          }, 2000);
+        }
         
         // Debug logging for auto-scroll trigger
         logger.info(`🔍 Auto-scroll trigger check`, {
@@ -485,6 +1163,9 @@ export class ScreenshotService {
             completedScreenshots: totalFrames,
             progress: 100,
             stage: 'Starting auto-scroll capture...',
+            url: screenshot.url,
+            type: 'frame' as const,
+            startTime: Date.now(),
             isScrolling: true
           });
           
@@ -494,7 +1175,13 @@ export class ScreenshotService {
             userId,
             collectionId: screenshot.collectionId.toString(),
             autoScroll,
-            totalFrames
+            totalFrames,
+            cookiePrevention,
+            deviceScaleFactor,
+            customCSS,
+            customJS,
+            basicAuth,
+            customCookies
           });
         }
       }
@@ -504,19 +1191,15 @@ export class ScreenshotService {
     } catch (error) {
       logger.error(`Frame screenshot capture failed for ${url}:`, error);
       
-      // Update screenshot status to failed
-      await Screenshot.findByIdAndUpdate(screenshotId, {
-        status: 'failed',
-        errorMessage: error instanceof Error ? error.message : 'Unknown error'
-      });
+      // Update screenshot status to failed if it was created
+      if (screenshotId) {
+        await Screenshot.findByIdAndUpdate(screenshotId, {
+          status: 'failed',
+          errorMessage: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
 
-      // Emit failure
-      io.to(`user-${userId}`).emit('screenshot-progress', {
-        screenshotId,
-        status: 'failed',
-        progress: 0,
-        stage: `Frame ${frameIndex} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
-      });
+      // No individual progress emits - collection progress will handle failures
 
       throw error;
     }
@@ -534,8 +1217,48 @@ export class ScreenshotService {
       stepSize: number;
       interval: number;
     };
+    // Screenshot options
+    cookiePrevention?: boolean;
+    deviceScaleFactor?: number;
+    customCSS?: string;
+    customJS?: string;
+    // Authentication options
+    basicAuth?: {
+      username: string;
+      password: string;
+    };
+    // Cookie injection
+    customCookies?: Array<{
+      name: string;
+      value: string;
+      domain?: string;
+      path?: string;
+      expires?: number;
+      httpOnly?: boolean;
+      secure?: boolean;
+      sameSite?: 'Strict' | 'Lax' | 'None';
+    }>;
+    triggerSelectors?: Array<{
+      selector: string;
+      delay: number;
+      waitAfter: number;
+      description?: string;
+    }>;
   }): Promise<void> {
-    const { url, projectId, userId, collectionId, totalFrames, autoScroll } = data;
+    const { 
+      url, 
+      projectId, 
+      userId, 
+      collectionId, 
+      totalFrames, 
+      autoScroll,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies
+    } = data;
     
     try {
       logger.info(`🔄 Starting auto-scroll capture for ${url}`, {
@@ -548,10 +1271,14 @@ export class ScreenshotService {
       const browser = await this.getBrowser();
       const page = await browser.newPage();
       
-      // Set viewport and user agent
-      await page.setViewportSize({ width: 1920, height: 1080 });
-      await page.setExtraHTTPHeaders({
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      // Configure page with cookie prevention and other settings
+      await this.configurePageForScreenshot(page, {
+        ...(cookiePrevention !== undefined && { cookiePrevention }),
+        ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+        ...(customCSS !== undefined && { customCSS }),
+        ...(customJS !== undefined && { customJS }),
+        ...(basicAuth !== undefined && { basicAuth }),
+        ...(customCookies !== undefined && { customCookies })
       });
       
       // Navigate to the page
@@ -806,6 +1533,9 @@ export class ScreenshotService {
           completedScreenshots: totalFrames + screenshotCount,
           progress: Math.round(((totalFrames + screenshotCount) / (totalFrames + screenshotCount + 1)) * 100),
           stage: `Auto-scroll: captured ${screenshotCount} additional screenshots`,
+          url,
+          type: 'crawl' as const,
+          startTime: Date.now(),
           isScrolling: true
         });
       }
@@ -819,6 +1549,9 @@ export class ScreenshotService {
         completedScreenshots: totalFrames + screenshotCount,
         progress: 100,
         stage: `Completed: ${totalFrames} frames + ${screenshotCount} scroll captures`,
+        url,
+        type: 'crawl' as const,
+        startTime: Date.now(),
         isScrolling: false
       });
       
@@ -838,13 +1571,27 @@ export class ScreenshotService {
         completedScreenshots: totalFrames,
         progress: 100,
         stage: `Auto-scroll failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        url,
+        type: 'crawl' as const,
+        startTime: Date.now(),
         isScrolling: false
       });
     }
   }
 
   async captureCrawlScreenshots(data: CrawlJobData): Promise<void> {
-    const { collectionId, urls, projectId, userId } = data;
+    const { 
+      collectionId, 
+      urls, 
+      projectId, 
+      userId,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies
+    } = data;
 
     try {
       logger.info(`Starting crawl screenshot capture for ${urls.length} URLs`, { collectionId });
@@ -868,13 +1615,16 @@ export class ScreenshotService {
 
       const screenshots = await Promise.all(screenshotPromises);
 
-      // Emit initial crawl progress
+      // Emit initial crawl progress with correct type
       io.to(`user-${userId}`).emit('collection-progress', {
         collectionId,
         totalScreenshots: screenshots.length,
         completedScreenshots: 0,
         progress: 0,
-        stage: 'Starting crawl capture...'
+        stage: 'Starting crawl capture...',
+        url: urls.length === 1 ? urls[0] : `${urls.length} URLs`,
+        type: 'crawl' as const,
+        startTime: Date.now()
       });
 
       // Capture screenshots sequentially to avoid overwhelming the browser
@@ -888,7 +1638,11 @@ export class ScreenshotService {
             userId,
             type: 'crawl',
             collectionId,
-            collectionName
+            collectionName,
+            ...(cookiePrevention !== undefined && { cookiePrevention }),
+            ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+            ...(customCSS !== undefined && { customCSS }),
+            ...(customJS !== undefined && { customJS })
           });
           
           completedCount++;
@@ -900,7 +1654,10 @@ export class ScreenshotService {
             totalScreenshots: screenshots.length,
             completedScreenshots: completedCount,
             progress,
-            stage: `Captured ${completedCount}/${screenshots.length} screenshots`
+            stage: `Captured ${completedCount}/${screenshots.length} screenshots`,
+            url: screenshot.url,
+            type: 'crawl' as const,
+            startTime: Date.now()
           });
           
         } catch (error) {
@@ -934,9 +1691,9 @@ export class ScreenshotService {
 
         try {
           const page = await browser.newPage();
-          await page.setExtraHTTPHeaders({
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-          });
+          
+          // Configure page with cookie prevention and other settings
+          await this.configurePageForScreenshot(page);
 
           await page.goto(currentUrl, { 
             waitUntil: 'domcontentloaded',

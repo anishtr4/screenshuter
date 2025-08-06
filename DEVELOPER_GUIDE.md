@@ -3,6 +3,7 @@
 ## Table of Contents
 - [Overview](#overview)
 - [Architecture](#architecture)
+- [Current Features](#current-features)
 - [Setup & Installation](#setup--installation)
 - [Development Workflow](#development-workflow)
 - [UI/UX Design System](#uiux-design-system)
@@ -11,21 +12,76 @@
 - [Security Implementation](#security-implementation)
 - [Testing Strategy](#testing-strategy)
 - [Deployment Guide](#deployment-guide)
-- [Recent Updates](#recent-updates)
 - [Contributing Guidelines](#contributing-guidelines)
+- [Adding New Fields Guide](#adding-new-fields-guide)
 
 ## Overview
 
-Screenshot SaaS is a modern web application built for automated screenshot capture and management. The application provides a comprehensive platform for users to create projects, capture screenshots with various configurations, manage collections, and handle user permissions.
+Screenshot SaaS is a production-ready Screenshot-as-a-Service platform built with modern technologies. The application provides comprehensive screenshot capture, management, and organization capabilities with advanced features including project management, role-based access control, API integration, and website crawling.
 
 ### Tech Stack
-- **Frontend**: React 18, TypeScript, Tailwind CSS, Vite
+- **Frontend**: React 19, TypeScript, Tailwind CSS, Vite
 - **Backend**: Node.js, Express.js, TypeScript
 - **Database**: MongoDB with Mongoose ODM
-- **Authentication**: JWT-based authentication
+- **Authentication**: JWT-based authentication with API tokens
 - **Real-time**: Socket.IO for progress updates
-- **Screenshot Engine**: Puppeteer
-- **UI Components**: Custom components with glass morphism design
+- **Screenshot Engine**: Playwright browser automation
+- **Queue System**: Agenda.js (MongoDB-based)
+- **UI Components**: Custom glassmorphism design with Lucide icons
+- **State Management**: Redux Toolkit with Redux Persist
+
+## Current Features
+
+### Core Screenshot Capabilities
+- **Single Screenshots**: Capture individual webpage screenshots with customizable options
+- **Frame Screenshots**: Time-based multi-frame captures at specified intervals (0-300 seconds)
+- **Website Crawling**: Automatic URL discovery and batch screenshot capture
+- **Auto-scroll Screenshots**: Capture long pages with automatic scrolling
+- **Collection Management**: Organize related screenshots into collections
+- **Real-time Progress**: Live updates via WebSocket for capture progress
+
+### Project Management
+- **Project Organization**: Group screenshots and collections by project
+- **Project Dashboard**: Overview with statistics and recent activity
+- **Project Settings**: Configurable project metadata and permissions
+- **Bulk Operations**: Mass delete, export, and management operations
+
+### User Management & Authentication
+- **Role-based Access**: Super Admin, Admin, and User roles with granular permissions
+- **JWT Authentication**: Secure token-based authentication system
+- **API Token System**: Programmatic access with secure API keys
+- **User Dashboard**: Account management and activity tracking
+- **Admin Panel**: Comprehensive user management for administrators
+
+### Advanced Features
+- **PDF Generation**: Export screenshots and collections as PDF documents
+- **ZIP Downloads**: Bulk download collections as compressed archives
+- **Image Processing**: Automatic thumbnail generation and optimization
+- **Queue System**: Async processing with Agenda.js job queue
+- **Configuration Management**: System-wide settings and limits
+- **Audit Logging**: Comprehensive activity tracking and monitoring
+
+### UI/UX Features
+- **Modern Glassmorphism Design**: Professional blue-indigo-slate theme
+- **Responsive Layout**: Mobile-first design with adaptive components
+- **Dark/Light Mode**: Theme switching with system preference detection
+- **Real-time Notifications**: Toast notifications and progress indicators
+- **Interactive Modals**: Full-screen image viewing and configuration dialogs
+- **Smooth Animations**: Buttery transitions and hover effects
+- **Professional Styling**: Business-appropriate design with subtle gradients
+
+### Screenshot Quality & Privacy Features
+- **High-Resolution Screenshots**: Configurable device scale factor (1x, 2x, 3x) for crisp images
+- **Cookie Prevention**: Automatic blocking of cookie consent popups and tracking scripts
+- **Privacy Protection**: Disables cookies, localStorage, sessionStorage, and indexedDB during capture
+- **Clean Screenshots**: CSS injection to hide common cookie banners and consent modals
+- **Consistent Capture**: Reduced motion settings for stable screenshot results
+
+### Authentication & Access Features
+- **HTTP Basic Authentication**: Support for username/password protected websites
+- **Custom Cookie Injection**: Inject session cookies and authentication tokens from JSON
+- **Protected Content Access**: Capture screenshots of authenticated pages and private content
+- **Flexible Authentication**: Works with all screenshot types (single, frame, crawl)
 
 ## Architecture
 
@@ -33,26 +89,27 @@ Screenshot SaaS is a modern web application built for automated screenshot captu
 ```
 src/
 ├── components/
-│   ├── layout/          # Layout components (DashboardLayout, etc.)
-│   ├── pages/           # Page components
-│   ├── modals/          # Modal components
-│   └── ui/              # Reusable UI components
-├── hooks/               # Custom React hooks
+│   ├── layout/          # Layout components (DashboardLayout)
+│   ├── pages/           # Page components (Dashboard, Projects, etc.)
+│   ├── modals/          # Modal components (AddScreenshot, PDF Config)
+│   └── ui/              # Reusable UI components (Button, GlassCard)
+├── hooks/               # Custom React hooks (useSocket, useProject)
 ├── lib/                 # Utilities and API client
-├── types/               # TypeScript type definitions
-└── styles/              # Global styles and Tailwind config
+├── store/               # Redux store and slices
+└── types/               # TypeScript type definitions
 ```
 
 ### Backend Architecture
 ```
 src/
-├── controllers/         # Request handlers
-├── models/             # Database models
-├── routes/             # API routes
-├── services/           # Business logic
-├── middleware/         # Custom middleware
-├── utils/              # Utility functions
-└── types/              # TypeScript interfaces
+├── controllers/         # Request handlers (screenshot, project, user)
+├── models/             # Database models (User, Project, Screenshot, Collection)
+├── routes/             # API routes (REST endpoints)
+├── services/           # Business logic (ScreenshotService)
+├── middleware/         # Custom middleware (auth, validation, error handling)
+├── utils/              # Utility functions (limits, admin creation)
+├── config/             # Configuration (database, agenda, logger)
+└── scripts/            # Migration and utility scripts
 ```
 
 ## Setup & Installation
@@ -88,16 +145,20 @@ Create `.env` files in both backend and frontend directories:
 **Backend (.env)**
 ```env
 NODE_ENV=development
-PORT=5000
+PORT=8003
 MONGODB_URI=mongodb://localhost:27017/screenshot-saas
 JWT_SECRET=your-super-secret-jwt-key
-FRONTEND_URL=http://localhost:3000
+FRONTEND_URL=http://localhost:5173
+
+# Screenshot Configuration
+DEVICE_SCALE_FACTOR=2
+COOKIE_PREVENTION_ENABLED=true
 ```
 
 **Frontend (.env)**
 ```env
-VITE_API_URL=http://localhost:5000/api
-VITE_WS_URL=http://localhost:5000
+VITE_API_URL=http://localhost:8003/api
+VITE_WS_URL=http://localhost:8003
 ```
 
 4. **Start Development Servers**
@@ -149,28 +210,35 @@ export function MyComponent({ title, onAction, className }: MyComponentProps) {
 ## UI/UX Design System
 
 ### Color Palette
-The application uses a professional blue-indigo-slate color system:
+The application uses a professional blue-indigo-slate color system with glassmorphism effects:
 
 ```css
 /* Primary Colors */
 --blue-500: #3b82f6
 --blue-600: #2563eb
+--blue-700: #1d4ed8
 --indigo-500: #6366f1
 --indigo-600: #4f46e5
+--indigo-700: #3730a3
 
 /* Neutral Colors */
 --slate-50: #f8fafc
 --slate-100: #f1f5f9
+--slate-200: #e2e8f0
 --slate-600: #475569
+--slate-700: #334155
+--slate-800: #1e293b
 --slate-900: #0f172a
 ```
 
 ### Design Principles
-1. **Glass Morphism**: Backdrop blur effects with transparency
-2. **Gradients**: Blue to indigo gradients for primary elements
-3. **Shadows**: Layered shadows for depth
-4. **Animations**: Smooth transitions (300ms duration)
-5. **Typography**: Clear hierarchy with slate colors
+1. **Glassmorphism**: Intense backdrop blur (20-40px) with gradient overlays
+2. **Professional Gradients**: Blue to indigo gradients with subtle opacity
+3. **Layered Shadows**: Multiple shadow layers for depth and elevation
+4. **Smooth Animations**: Butter-smooth transitions (200-700ms) with ease-out timing
+5. **Typography**: Clear hierarchy with slate colors and proper contrast
+6. **Compact Layouts**: Efficient space utilization with reduced padding
+7. **Hover Effects**: Dual shimmer effects and subtle transforms
 
 ### Component Patterns
 
@@ -197,30 +265,45 @@ The application uses a professional blue-indigo-slate color system:
 ## API Documentation
 
 ### Authentication
-All API endpoints require JWT authentication except for login/register.
-
-**Headers**
 ```
-Authorization: Bearer <jwt-token>
-Content-Type: application/json
+http://localhost:8003/api
 ```
 
-### Core Endpoints
+#### Authentication
+```
+POST   /api/auth/login        # User login
+POST   /api/auth/signup       # User registration
+POST   /api/auth/logout       # User logout
+```
 
 #### Projects
 ```
-GET    /api/projects          # Get user projects
-POST   /api/projects          # Create project
-GET    /api/projects/:id      # Get project details
-PUT    /api/projects/:id      # Update project
-DELETE /api/projects/:id      # Delete project
+GET    /api/projects                              # Get user projects
+POST   /api/projects                              # Create project
+GET    /api/projects/:id                          # Get project details
+PUT    /api/projects/:id                          # Update project
+DELETE /api/projects/:id                          # Delete project
+GET    /api/projects/:id/screenshots              # Get project screenshots
+GET    /api/projects/:id/collections              # Get project collections
+DELETE /api/projects/:projectId/collections/:collectionId  # Delete collection
+POST   /api/projects/:id/pdf                      # Generate project PDF
 ```
 
 #### Screenshots
 ```
-GET    /api/screenshots/:projectId    # Get project screenshots
-POST   /api/screenshots               # Create screenshot
-DELETE /api/screenshots/:id          # Delete screenshot
+POST   /api/screenshots                   # Create single screenshot
+POST   /api/screenshots/crawl             # Start website crawl
+POST   /api/screenshots/crawl/select      # Select URLs from crawl
+GET    /api/screenshots/:id               # Get screenshot details
+GET    /api/screenshots/collection/:id    # Get collection screenshots
+DELETE /api/screenshots/:id               # Delete screenshot
+DELETE /api/screenshots/collection/:id    # Delete collection
+```
+
+#### Collections
+```
+GET    /api/collections/:id/download      # Download collection as ZIP
+POST   /api/collections/:id/pdf           # Generate collection PDF
 ```
 
 #### Users (Admin only)
@@ -229,6 +312,29 @@ GET    /api/users             # Get all users
 POST   /api/users             # Create user
 PUT    /api/users/:id         # Update user
 DELETE /api/users/:id         # Delete user
+GET    /api/users/stats       # Get user statistics
+GET    /api/users/pending     # Get pending users
+PATCH  /api/users/:id/approve # Approve user
+```
+
+#### API Tokens
+```
+GET    /api/tokens            # Get user tokens
+POST   /api/tokens            # Create new token
+DELETE /api/tokens/:id        # Delete token
+```
+
+#### Configuration
+```
+GET    /api/configs           # Get system configs
+PUT    /api/configs           # Update configs
+PATCH  /api/configs/:id       # Update specific config
+```
+
+#### Images
+```
+GET    /api/images/:id        # Get screenshot image
+GET    /api/images/:id?type=thumbnail  # Get thumbnail
 ```
 
 #### API Keys
@@ -262,6 +368,83 @@ Response:
   }
 }
 ```
+
+### Authentication & Cookie Options
+
+All screenshot endpoints now support additional authentication and cookie injection options:
+
+```javascript
+// HTTP Basic Authentication Example
+POST /api/screenshots
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://protected-site.com",
+  "basicAuth": {
+    "username": "admin",
+    "password": "secret123"
+  },
+  "cookiePrevention": true,
+  "deviceScaleFactor": 2
+}
+
+// Custom Cookie Injection Example
+POST /api/screenshots
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://authenticated-app.com",
+  "customCookies": [
+    {
+      "name": "session_token",
+      "value": "abc123xyz789",
+      "domain": "authenticated-app.com",
+      "path": "/",
+      "secure": true,
+      "httpOnly": true,
+      "sameSite": "Lax"
+    },
+    {
+      "name": "user_id",
+      "value": "12345",
+      "expires": 1735689600
+    }
+  ]
+}
+
+// Combined Authentication Example
+POST /api/screenshots
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://complex-auth-site.com",
+  "basicAuth": {
+    "username": "api_user",
+    "password": "api_pass"
+  },
+  "customCookies": [
+    {
+      "name": "csrf_token",
+      "value": "csrf_abc123"
+    }
+  ],
+  "customCSS": ".banner { display: none !important; }",
+  "customJS": "document.querySelector('.popup').remove();"
+}
+```
+
+#### Authentication Options Reference
+
+**basicAuth** (optional)
+- `username` (string): HTTP Basic Auth username
+- `password` (string): HTTP Basic Auth password
+
+**customCookies** (optional array)
+- `name` (string, required): Cookie name
+- `value` (string, required): Cookie value
+- `domain` (string, optional): Cookie domain (defaults to current page domain)
+- `path` (string, optional): Cookie path (defaults to "/")
+- `expires` (number, optional): Unix timestamp for cookie expiration
+- `httpOnly` (boolean, optional): HTTP-only flag (defaults to false)
+- `secure` (boolean, optional): Secure flag (defaults to false)
+- `sameSite` (string, optional): SameSite policy - "Strict", "Lax", or "None" (defaults to "Lax")
 
 ## Database Schema
 
@@ -298,14 +481,28 @@ interface Project {
 interface Screenshot {
   _id: ObjectId
   projectId: ObjectId // ref: Project
-  userId: ObjectId // ref: User
   url: string
-  imagePath: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  imagePath?: string
+  thumbnailPath?: string
+  type: 'normal' | 'crawl' | 'frame' | 'scroll'
   collectionId?: ObjectId // ref: Collection
-  timeFrame?: number
+  status: 'pending' | 'processing' | 'completed' | 'failed'
+  errorMessage?: string
+  metadata?: {
+    title?: string
+    width?: number
+    height?: number
+    fileSize?: number
+    capturedAt?: Date
+    frameDelay?: number
+    frameIndex?: number
+    totalFrames?: number
+    scrollPosition?: number
+    scrollIndex?: number
+    isAutoScroll?: boolean
+    scrollType?: string
+  }
   createdAt: Date
-  updatedAt: Date
 }
 ```
 
@@ -529,6 +726,385 @@ For new features, provide:
 - **Issues**: GitHub Issues for bugs and features
 - **Discussions**: GitHub Discussions for questions
 - **Wiki**: Project wiki for additional documentation
+
+## Security Considerations
+
+### Authentication Features Security
+
+#### HTTP Basic Authentication
+- **Credential Handling**: Basic Auth credentials are Base64 encoded (not encrypted)
+- **HTTPS Required**: Always use HTTPS when sending Basic Auth credentials
+- **Storage**: Credentials are not stored; they're only used during screenshot capture
+- **Scope**: Authentication applies only to the specific screenshot request
+
+#### Custom Cookie Injection
+- **Input Validation**: Cookie values should be validated on the frontend
+- **Sensitive Data**: Be cautious when injecting session tokens or authentication cookies
+- **Domain Restrictions**: Cookies are automatically scoped to the target domain
+- **Expiration**: Set appropriate expiration times for temporary cookies
+
+#### Best Practices
+1. **Environment Separation**: Use different credentials for development/production
+2. **Credential Rotation**: Regularly rotate authentication credentials
+3. **Access Logging**: Monitor authentication attempts and failures
+4. **Rate Limiting**: Implement rate limiting for authentication endpoints
+5. **Input Sanitization**: Sanitize custom CSS/JS inputs to prevent injection attacks
+
+## Adding New Fields Guide
+
+This comprehensive guide explains how to add new fields to the Screenshot SaaS application, covering both frontend and backend implementation.
+
+### Overview
+
+When adding new fields to the screenshot configuration, you need to update:
+1. **Backend**: Data interfaces, controllers, services, and job handlers
+2. **Frontend**: Form interfaces, UI components, and API client
+3. **Documentation**: Update API docs and user guides
+
+### Backend Implementation
+
+#### Step 1: Update Data Interfaces
+
+**File**: `backend/src/services/ScreenshotService.ts`
+
+Update the relevant interfaces to include your new field:
+
+```typescript
+// Add to ScreenshotJobData interface
+export interface ScreenshotJobData {
+  // ... existing fields
+  newField?: YourFieldType; // Add your new field here
+}
+
+// Add to method parameter interfaces
+interface CaptureScreenshotParams {
+  // ... existing fields
+  newField?: YourFieldType;
+}
+```
+
+#### Step 2: Update Controllers
+
+**File**: `backend/src/controllers/screenshotController.ts`
+
+Extract the new field from request bodies:
+
+```typescript
+export const createScreenshot = async (req: Request, res: Response) => {
+  try {
+    const { 
+      url, 
+      projectId, 
+      // ... existing fields
+      newField // Add your new field here
+    } = req.body;
+
+    // Pass to job scheduling
+    await agenda.now('capture-screenshot', {
+      // ... existing fields
+      newField, // Include in job data
+    });
+  } catch (error) {
+    // ... error handling
+  }
+};
+```
+
+#### Step 3: Update Job Handlers
+
+**File**: `backend/src/config/agenda.ts`
+
+Update job handlers to extract and pass the new field:
+
+```typescript
+agenda.define('capture-screenshot', async (job) => {
+  try {
+    const { 
+      screenshotId, 
+      url, 
+      projectId,
+      // ... existing fields
+      newField // Extract from job data
+    } = job.attrs.data;
+
+    // Pass to service method
+    await screenshotService.captureScreenshot(screenshotId, url, projectId, {
+      // ... existing options
+      newField, // Include in options
+    });
+  } catch (error) {
+    // ... error handling
+  }
+});
+```
+
+#### Step 4: Update Service Methods
+
+**File**: `backend/src/services/ScreenshotService.ts`
+
+Update service methods to handle the new field:
+
+```typescript
+public async captureScreenshot(
+  screenshotId: string,
+  url: string,
+  projectId: string,
+  options?: {
+    // ... existing options
+    newField?: YourFieldType;
+  }
+): Promise<void> {
+  // Extract the new field
+  const { newField } = options || {};
+  
+  // Use in page configuration
+  await this.configurePageForScreenshot(page, {
+    // ... existing options
+    newField,
+  });
+}
+
+private async configurePageForScreenshot(page: Page, options?: {
+  // ... existing options
+  newField?: YourFieldType;
+}): Promise<void> {
+  const { newField } = options || {};
+  
+  // Implement your field logic here
+  if (newField) {
+    // Apply your field configuration to the page
+    await page.someMethod(newField);
+  }
+}
+```
+
+### Frontend Implementation
+
+#### Step 1: Update Form Interface
+
+**File**: `frontend/src/components/modals/AddScreenshotModal.tsx`
+
+Update the `ScreenshotFormData` interface:
+
+```typescript
+export interface ScreenshotFormData {
+  // ... existing fields
+  newField?: YourFieldType; // Add your new field
+}
+```
+
+#### Step 2: Update Default Form Data
+
+Add default value for your new field:
+
+```typescript
+const [formData, setFormData] = useState<ScreenshotFormData>({
+  // ... existing defaults
+  newField: defaultValue, // Set appropriate default
+});
+```
+
+#### Step 3: Add UI Components
+
+Add form controls for your new field. Use the standard input styling:
+
+```tsx
+{/* Your New Field */}
+<div>
+  <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block font-medium">
+    Your Field Label
+  </label>
+  <Input
+    type="text" // or appropriate input type
+    placeholder="Enter value"
+    value={formData.newField || ''}
+    onChange={(e) => setFormData(prev => ({
+      ...prev,
+      newField: e.target.value
+    }))}
+    className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+  />
+</div>
+```
+
+#### Step 4: Update API Client
+
+**File**: `frontend/src/lib/api.ts`
+
+Update the `createScreenshot` method to handle your new field:
+
+```typescript
+async createScreenshot(url: string, projectId: string, timeFrames?: number[], options?: any) {
+  const payload: any = { url, projectId };
+  
+  if (options) {
+    const { 
+      // ... existing options
+      newField,
+      ...otherOptions 
+    } = options;
+    
+    // Handle your field appropriately
+    if (newField) {
+      // If it goes at root level:
+      payload.newField = newField;
+      
+      // OR if it goes in options object:
+      configOptions.newField = newField;
+    }
+  }
+  
+  const response = await this.client.post('/screenshots', payload);
+  return response.data;
+}
+```
+
+### Field Placement Guidelines
+
+#### Root Level Fields
+These go directly in the request payload:
+- Authentication options (`basicAuth`, `customCookies`)
+- Screenshot type modifiers (`timeFrames`, `autoScroll`)
+- Core functionality fields
+
+#### Options Object Fields
+These go nested in the `options` object:
+- Page configuration (`cookiePrevention`, `deviceScaleFactor`)
+- Custom content injection (`customCSS`, `customJS`)
+- Display/rendering options
+
+### Standard Input Styling
+
+Always use this className for consistent input styling:
+
+```css
+className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+```
+
+### UI Organization
+
+#### Collapsible Sections
+Organize fields into logical sections:
+
+```tsx
+{/* Your Section */}
+<div className="space-y-4">
+  <button
+    type="button"
+    onClick={() => setShowYourSection(!showYourSection)}
+    className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+  >
+    <YourIcon className="h-4 w-4" />
+    Your Section Title
+    {showYourSection ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+  </button>
+  
+  {showYourSection && (
+    <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+      {/* Your fields here */}
+    </div>
+  )}
+</div>
+```
+
+### Testing Your Implementation
+
+1. **Backend Testing**:
+   ```bash
+   cd backend
+   npm run build  # Ensure no TypeScript errors
+   npm run dev    # Test the API
+   ```
+
+2. **Frontend Testing**:
+   ```bash
+   cd frontend
+   npm run build  # Ensure no TypeScript errors
+   npm run dev    # Test the UI
+   ```
+
+3. **End-to-End Testing**:
+   - Create a screenshot with your new field
+   - Verify the field is passed correctly through the API
+   - Check that the field affects the screenshot as expected
+
+### Common Patterns
+
+#### Boolean Fields (Checkboxes)
+```tsx
+<div className="flex items-center space-x-3">
+  <input
+    type="checkbox"
+    id="yourField"
+    checked={formData.yourField}
+    onChange={(e) => setFormData(prev => ({
+      ...prev,
+      yourField: e.target.checked
+    }))}
+    className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
+  />
+  <label htmlFor="yourField" className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+    Your Field Description
+  </label>
+</div>
+```
+
+#### Select Fields (Dropdowns)
+```tsx
+<select
+  value={formData.yourField}
+  onChange={(e) => setFormData(prev => ({
+    ...prev,
+    yourField: e.target.value
+  }))}
+  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+>
+  <option value="option1">Option 1</option>
+  <option value="option2">Option 2</option>
+</select>
+```
+
+#### Textarea Fields
+```tsx
+<textarea
+  placeholder="Enter your content"
+  value={formData.yourField}
+  onChange={(e) => setFormData(prev => ({
+    ...prev,
+    yourField: e.target.value
+  }))}
+  className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-mono"
+  rows={3}
+/>
+```
+
+### Documentation Updates
+
+After implementing your field:
+
+1. **Update API Documentation**: Add the new field to API examples
+2. **Update User Guide**: Explain the field's purpose and usage
+3. **Update Developer Guide**: Document any special considerations
+4. **Add Code Comments**: Explain complex field logic
+
+This guide ensures consistent implementation across the entire application stack.
+
+#### Security Headers
+```typescript
+// Example security headers for authentication
+const securityHeaders = {
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'X-Content-Type-Options': 'nosniff',
+  'X-Frame-Options': 'DENY',
+  'X-XSS-Protection': '1; mode=block'
+};
+```
+
+### Data Protection
+- **Credential Encryption**: Consider encrypting stored authentication data
+- **Audit Trails**: Log authentication events for security monitoring
+- **Access Control**: Implement proper user permissions for sensitive features
+- **Session Management**: Secure session handling for authenticated users
 
 ---
 

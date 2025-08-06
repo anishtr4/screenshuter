@@ -22,21 +22,35 @@ import { PDFConfigModal } from '../modals/PDFConfigModal'
 import { apiClient } from '../../lib/api'
 import { useSocket } from '../../hooks/useSocket'
 
+// Enhanced Screenshot interface that works with both backend and modal components
 interface Screenshot {
   id?: string
   _id?: string
   title?: string
   url: string
-  status: 'pending' | 'processing' | 'completed' | 'failed'
+  status: 'pending' | 'processing' | 'completed' | 'failed' | string
   type?: string
   metadata?: {
     title?: string
     description?: string
     timestamp?: string
+    isCollection?: boolean // Added to support collection flag
+    totalFrames?: number // Added to support frame collections
+    // Trigger selector related fields
+    triggerIndex?: number
+    triggerSelector?: string
+    triggerDescription?: string
+    width?: number
+    height?: number
+    fileSize?: number
+    capturedAt?: string
   }
   isFromCollection?: boolean
   collectionId?: string
   frameCount?: number
+  createdAt?: string // Added to match modal component expectations
+  updatedAt?: string // Added to match modal component expectations
+  name?: string // Added to support collection interface
 }
 
 interface Project {
@@ -49,8 +63,22 @@ const ProjectDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   
-  console.log('🔍 Route parameter ID:', id)
-  console.log('🔍 Route parameter type:', typeof id)
+  // Debug logs
+  useEffect(() => {
+    console.log('🔍 Route parameter ID:', id)
+    console.log('🔍 Route parameter type:', typeof id)
+  }, [id])
+  
+  // Debug component re-renders
+  useEffect(() => {
+    console.log('🔄 Component re-rendered. State:', {
+      screenshotsCount: screenshots.length,
+      loading,
+      socketConnected: isConnected,
+      collectionProgressCount: Object.keys(collectionProgress).length,
+      screenshotProgressCount: Object.keys(screenshotProgress).length
+    })
+  })
   
   // State
   const [project, setProject] = useState<Project | null>(null)
@@ -111,15 +139,153 @@ const ProjectDetailPage: React.FC = () => {
     console.log('📚 Collection Progress Data:', collectionProgress)
     console.log('📊 Screenshot Progress Count:', Object.keys(screenshotProgress).length)
     console.log('📚 Collection Progress Count:', Object.keys(collectionProgress).length)
+  
+    // Debug collection progress details and filter out incomplete data
+    Object.entries(collectionProgress).forEach(([id, progress]) => {
+      console.log('🔍 Collection Progress Detail:', {
+        id,
+        type: progress.type,
+        stage: progress.stage,
+        progress: progress.progress,
+        url: progress.url,
+        hasType: !!progress.type,
+        hasUrl: !!progress.url,
+        isComplete: !!progress.type && !!progress.url
+      })
+    })
   }, [isConnected, screenshotProgress, collectionProgress])
+
+  // Clean up optimistic updates when real data comes in
+  useEffect(() => {
+    // Remove optimistic updates when real screenshot progress starts
+    Object.keys(screenshotProgress).forEach((screenshotId) => {
+      // Remove any temp optimistic updates for this URL
+      setScreenshots(prev => prev.filter(screenshot => {
+        const isOptimistic = screenshot._id?.toString().startsWith('temp-')
+        if (isOptimistic) {
+          console.log('🧹 Removing optimistic update:', screenshot._id, 'for real screenshot:', screenshotId)
+          return false
+        }
+        return true
+      }))
+    })
+    
+    // Same for collections
+    Object.keys(collectionProgress).forEach((collectionId) => {
+      setScreenshots(prev => prev.filter(screenshot => {
+        const isOptimistic = screenshot._id?.toString().startsWith('temp-collection-')
+        if (isOptimistic) {
+          console.log('🧹 Removing optimistic collection:', screenshot._id, 'for real collection:', collectionId)
+          return false
+        }
+        return true
+      }))
+    })
+  }, [screenshotProgress, collectionProgress])
 
   // Handle socket progress events - NO API CALLS, purely socket-based updates
   useEffect(() => {
-    // Handle screenshot completion - just clear progress data, no API calls
-    Object.values(screenshotProgress).forEach((progress) => {
+    // Handle screenshot completion - add completed screenshot to main list
+    Object.values(screenshotProgress).forEach(async (progress) => {
       if (progress.status === 'completed') {
         console.log('Screenshot completed (socket only):', progress.screenshotId)
-        // Only clear progress data, no API refresh
+        
+        // Try to update existing screenshot first
+        const existingFound = updateItemStatus(progress.screenshotId, 'completed')
+        
+        // If no existing screenshot found, create it from socket data to avoid API call and flickering
+        if (!existingFound) {
+          console.log('No existing screenshot found, creating from socket data:', progress.screenshotId)
+          
+          // Create screenshot object from socket progress data
+          const completedScreenshot = {
+            _id: progress.screenshotId,
+            id: progress.screenshotId,
+            url: progress.url || 'Unknown URL', // Use URL from socket event
+            status: 'completed' as const,
+            imagePath: progress.imagePath,
+            thumbnailPath: progress.thumbnailPath,
+            title: progress.metadata?.title || 'Screenshot',
+            type: progress.type, // Add type from socket data
+            collectionId: progress.collectionId, // Add collectionId from socket data
+            metadata: {
+              title: progress.metadata?.title || 'Screenshot',
+              width: progress.metadata?.width,
+              height: progress.metadata?.height,
+              fileSize: progress.metadata?.fileSize,
+              capturedAt: progress.metadata?.capturedAt || new Date().toISOString(),
+              timestamp: progress.createdAt || new Date().toISOString(), // Use actual creation date
+              // Include trigger-related fields if available
+              triggerSelector: progress.metadata?.triggerSelector,
+              triggerDescription: progress.metadata?.triggerDescription,
+              triggerIndex: progress.metadata?.triggerIndex
+            },
+            createdAt: progress.createdAt || new Date().toISOString(), // Use actual creation date
+            updatedAt: new Date().toISOString()
+          }
+          
+          // Replace the appropriate loading placeholder with the completed screenshot
+          setScreenshots(prev => {
+            // Determine if this is a trigger screenshot based on the title pattern
+            const isTriggerScreenshot = completedScreenshot.title?.includes('Trigger') || 
+                                      completedScreenshot.metadata?.title?.includes('Trigger')
+            
+            if (isTriggerScreenshot) {
+              // For trigger screenshots, replace the matching temp trigger placeholder
+              const updatedScreenshots = prev.map(screenshot => {
+                const screenshotId = (screenshot.id || screenshot._id)?.toString()
+                
+                // Check if this is a temp trigger placeholder that matches
+                if (screenshotId?.startsWith('temp-trigger-') && 
+                    screenshot.status === 'pending' &&
+                    (screenshot.title?.includes(completedScreenshot.title?.split(':')[1]?.trim() || '') ||
+                     screenshot.metadata?.triggerSelector === completedScreenshot.metadata?.triggerSelector)) {
+                  console.log(`🎯 Replacing trigger placeholder ${screenshotId} with completed screenshot ${completedScreenshot._id}`)
+                  return completedScreenshot
+                }
+                return screenshot
+              })
+              
+              // If no placeholder was found, add it at the beginning
+              const wasReplaced = updatedScreenshots.some(s => s._id === completedScreenshot._id)
+              if (!wasReplaced) {
+                console.log(`🎯 No matching trigger placeholder found, adding trigger screenshot at beginning`)
+                return [completedScreenshot, ...prev]
+              }
+              
+              return updatedScreenshots
+            } else {
+              // For main screenshots, replace the temp-main placeholder
+              const updatedScreenshots = prev.map(screenshot => {
+                const screenshotId = (screenshot.id || screenshot._id)?.toString()
+                
+                if (screenshotId?.startsWith('temp-main-') && screenshot.status === 'pending') {
+                  console.log(`📷 Replacing main placeholder ${screenshotId} with completed screenshot ${completedScreenshot._id}`)
+                  return completedScreenshot
+                }
+                return screenshot
+              })
+              
+              // If no placeholder was found, add it at the beginning
+              const wasReplaced = updatedScreenshots.some(s => s._id === completedScreenshot._id)
+              if (!wasReplaced) {
+                console.log(`📷 No matching main placeholder found, adding main screenshot at beginning`)
+                return [completedScreenshot, ...prev]
+              }
+              
+              return updatedScreenshots
+            }
+          })
+          
+          // Load thumbnail for the new screenshot if available
+          if (completedScreenshot.thumbnailPath) {
+            loadImageUrls([completedScreenshot])
+          }
+          
+          console.log('✅ Added completed screenshot to grid from socket data:', progress.screenshotId)
+        }
+        
+        // Clear progress data after a delay
         setTimeout(() => {
           clearScreenshotProgress(progress.screenshotId)
         }, 2000) // Keep progress visible for 2 seconds after completion
@@ -141,13 +307,35 @@ const ProjectDetailPage: React.FC = () => {
       
       if (isActuallyComplete) {
         console.log('Collection actually completed (socket only):', progress.collectionId, progress.stage)
-        // Only clear progress data, no API refresh
+        
+        // Update collection status locally to avoid flickering and remove "Processing" badge
+        updateItemStatus(progress.collectionId, 'completed')
+        
+        // Clear progress data after a delay
         setTimeout(() => {
           clearCollectionProgress(progress.collectionId)
         }, 2000) // Keep progress visible for 2 seconds after completion
       }
     })
   }, [collectionProgress, clearCollectionProgress])
+
+  // Update screenshot/collection status locally to avoid flickering
+  const updateItemStatus = (itemId: string, status: 'processing' | 'completed' | 'failed'): boolean => {
+    let found = false
+    setScreenshots(prev => prev.map(screenshot => {
+      const screenshotId = (screenshot.id || screenshot._id)?.toString()
+      if (screenshotId === itemId) {
+        found = true
+        return {
+          ...screenshot,
+          status,
+          updatedAt: new Date().toISOString()
+        }
+      }
+      return screenshot
+    }))
+    return found
+  }
 
   // Fetch project data including screenshots and collections
   const fetchScreenshots = async () => {
@@ -209,6 +397,11 @@ const ProjectDetailPage: React.FC = () => {
 
   // Handle add screenshot
   const handleAddScreenshot = async (data: any) => {
+    console.log('🔍 handleAddScreenshot received data:', data)
+    console.log('🔐 Authentication fields:', { basicAuth: data.basicAuth, customCookies: data.customCookies })
+    console.log('🎯 Trigger selectors:', data.triggerSelectors)
+    console.log('🎨 CSS/JS fields:', { customCSS: data.options?.customCSS, customJS: data.options?.customJS })
+    console.log('📊 Full options object:', data.options)
     setIsSubmitting(true)
     try {
       // Handle different types of screenshot creation
@@ -244,7 +437,14 @@ const ProjectDetailPage: React.FC = () => {
         
         if (isFrameScreenshot) {
           // Frame screenshots create collections - handle like crawl collections
-          const response = await apiClient.createScreenshot(data.url, id!, data.timeFrames, data.options)
+          // Include authentication fields in options
+          const frameOptions = {
+            ...data.options,
+            basicAuth: data.basicAuth,
+            customCookies: data.customCookies,
+            triggerSelectors: data.triggerSelectors
+          }
+          const response = await apiClient.createScreenshot(data.url, id!, data.timeFrames, frameOptions)
           toast.success('Frame screenshot request submitted!')
           setShowAddModal(false)
           
@@ -270,13 +470,24 @@ const ProjectDetailPage: React.FC = () => {
           console.log('Frame collection created, waiting for socket updates...', response.collection?.id)
         } else {
           // Regular single screenshot creation
-          await apiClient.createScreenshot(data.url, id!, data.timeFrames, data.options)
+          // Include authentication fields and trigger selectors in options
+          const screenshotOptions = {
+            ...data.options,
+            basicAuth: data.basicAuth,
+            customCookies: data.customCookies,
+            triggerSelectors: data.triggerSelectors
+          }
+          await apiClient.createScreenshot(data.url, id!, data.timeFrames, screenshotOptions)
           toast.success('Screenshot request submitted!')
           setShowAddModal(false)
           
-          // Add optimistic update for immediate UI feedback
-          const newScreenshot: Screenshot = {
-            _id: `temp-${Date.now()}`,
+          // Add optimistic updates for immediate UI feedback
+          const optimisticScreenshots: Screenshot[] = []
+          const baseTimestamp = Date.now()
+          
+          // Create loading placeholder for main screenshot
+          const mainScreenshot: Screenshot = {
+            _id: `temp-main-${baseTimestamp}`,
             url: data.url,
             status: 'pending',
             title: data.title || data.url,
@@ -285,9 +496,31 @@ const ProjectDetailPage: React.FC = () => {
               timestamp: new Date().toISOString()
             }
           }
+          optimisticScreenshots.push(mainScreenshot)
           
-          setScreenshots(prev => [newScreenshot, ...prev])
-          console.log('Screenshot created, waiting for socket updates...')
+          // Create loading placeholders for each trigger selector
+          if (data.triggerSelectors && data.triggerSelectors.length > 0) {
+            data.triggerSelectors.forEach((trigger: any, index: number) => {
+              const triggerScreenshot: Screenshot = {
+                _id: `temp-trigger-${baseTimestamp}-${index}`,
+                url: data.url,
+                status: 'pending',
+                title: trigger.description || `Trigger ${index + 1}: ${trigger.selector}`,
+                metadata: {
+                  title: trigger.description || `Trigger ${index + 1}: ${trigger.selector}`,
+                  timestamp: new Date().toISOString(),
+                  triggerIndex: index,
+                  triggerSelector: trigger.selector,
+                  triggerDescription: trigger.description
+                }
+              }
+              optimisticScreenshots.push(triggerScreenshot)
+            })
+            console.log(`🎯 Created ${data.triggerSelectors.length} trigger loading placeholders`)
+          }
+          
+          setScreenshots(prev => [...optimisticScreenshots, ...prev])
+          console.log(`Screenshot created with ${optimisticScreenshots.length} loading placeholders, waiting for socket updates...`)
         }
       }
     } catch (error) {
@@ -460,14 +693,111 @@ const ProjectDetailPage: React.FC = () => {
   // Memoized filtered screenshots
   const filteredScreenshots = useMemo(() => {
     if (!Array.isArray(screenshots)) return []
-    return screenshots.filter(screenshot => {
-      if (!searchTerm) return true
-      const title = screenshot.title?.toLowerCase() || screenshot.metadata?.title?.toLowerCase() || ''
-      const url = screenshot.url?.toLowerCase() || ''
-      const search = searchTerm.toLowerCase()
-      return title.includes(search) || url.includes(search)
+    
+    // Get list of active collection IDs
+    const activeCollectionIds = Object.keys(collectionProgress).filter(id => 
+      collectionProgress[id].progress < 100
+    )
+    
+    console.log('🔍 Filtering screenshots:', {
+      totalScreenshots: screenshots.length,
+      activeCollectionIds,
+      collectionProgressCount: Object.keys(collectionProgress).length,
+      collectionProgress: Object.keys(collectionProgress).map(id => ({
+        id,
+        progress: collectionProgress[id].progress,
+        type: collectionProgress[id].type
+      }))
     })
-  }, [screenshots, searchTerm])
+    
+    // Remove duplicates first by using a Map with unique IDs
+    const uniqueScreenshots = Array.from(
+      new Map(screenshots.map(screenshot => [
+        (screenshot.id || screenshot._id)?.toString(),
+        screenshot
+      ])).values()
+    )
+    
+    console.log('🔍 Deduplication results:', {
+      originalCount: screenshots.length,
+      uniqueCount: uniqueScreenshots.length,
+      duplicatesRemoved: screenshots.length - uniqueScreenshots.length
+    })
+    
+    return uniqueScreenshots
+      .filter(screenshot => {
+        const screenshotId = (screenshot.id || screenshot._id)?.toString()
+        
+        // Debug: Log each screenshot being processed
+        console.log('🔍 Processing screenshot:', {
+          id: screenshotId,
+          url: screenshot.url,
+          title: screenshot.title,
+          collectionId: screenshot.collectionId?.toString(),
+          type: screenshot.type,
+          isFromCollection: screenshot.isFromCollection,
+          frameCount: screenshot.frameCount,
+          hasCollectionId: !!screenshot.collectionId
+        })
+        
+        // Hide collections that have active progress (show progress card instead)
+        if (screenshotId && Object.keys(collectionProgress).some(progressId => 
+          progressId === screenshotId && collectionProgress[progressId].progress < 100
+        )) {
+          console.log('🚫 Hiding collection with active progress:', {
+            screenshotId,
+            progress: collectionProgress[screenshotId]?.progress
+          })
+          return false
+        }
+        
+        // Hide individual screenshots that belong to collections (but NOT the collections themselves)
+        const currentScreenshotId = (screenshot.id || screenshot._id)?.toString()
+        const screenshotCollectionId = screenshot.collectionId?.toString()
+        
+        // If this screenshot has a collectionId AND it's different from its own ID,
+        // then it's an individual screenshot that belongs to a collection - hide it
+        if (screenshotCollectionId && screenshotCollectionId !== currentScreenshotId) {
+          console.log('🚫 Hiding individual screenshot from collection:', {
+            screenshotId: currentScreenshotId,
+            collectionId: screenshotCollectionId,
+            url: screenshot.url
+          })
+          return false
+        }
+        
+        // Only hide screenshots that explicitly belong to collections (not standalone screenshots)
+        // Individual screenshots added by users should always be visible
+        if (screenshotCollectionId && screenshotCollectionId !== currentScreenshotId) {
+          console.log('🚫 Hiding collection frame screenshot:', {
+            screenshotId: currentScreenshotId,
+            collectionId: screenshotCollectionId,
+            url: screenshot.url
+          })
+          return false
+        }
+        
+        // Apply search filter
+        if (!searchTerm) return true
+        const title = screenshot.title?.toLowerCase() || screenshot.metadata?.title?.toLowerCase() || ''
+        const url = screenshot.url?.toLowerCase() || ''
+        const search = searchTerm.toLowerCase()
+        return title.includes(search) || url.includes(search)
+      })
+      .sort((a, b) => {
+        // First priority: Completed items (both collections and screenshots) at the top
+        const aCompleted = a.status === 'completed'
+        const bCompleted = b.status === 'completed'
+        
+        if (aCompleted && !bCompleted) return -1  // a goes first
+        if (!aCompleted && bCompleted) return 1   // b goes first
+        
+        // Second priority: Sort by updated date (for completed items) or creation date
+        const dateA = new Date(a.updatedAt || a.createdAt || 0)
+        const dateB = new Date(b.updatedAt || b.createdAt || 0)
+        return dateB.getTime() - dateA.getTime()
+      })
+  }, [screenshots, searchTerm, collectionProgress, screenshotProgress])
 
   // Effects
   useEffect(() => {
@@ -488,7 +818,11 @@ const ProjectDetailPage: React.FC = () => {
     return (
       <DashboardLayout title="Project Not Found" subtitle="The requested project could not be found">
         <div className="text-center py-12">
-          <Button onClick={() => navigate('/projects')}>
+          <Button 
+            variant="outline"
+            className="transition-all duration-200 ease-out"
+            onClick={() => navigate('/projects')}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Projects
           </Button>
@@ -507,7 +841,8 @@ const ProjectDetailPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <Button 
-              variant="outline" 
+              variant="outline"
+              className="transition-all duration-200 ease-out"
               onClick={() => navigate('/projects')}
             >
               <ArrowLeft className="h-4 w-4 mr-2" />
@@ -553,37 +888,240 @@ const ProjectDetailPage: React.FC = () => {
         </div>
 
 
-
-        {/* Professional Screenshots Grid */}
+        
+        {/* Streamlined Empty State */}
         {filteredScreenshots.length === 0 ? (
-          <div className="text-center py-16">
-            <div className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-2xl rounded-2xl shadow-lg border border-slate-200/50 dark:border-slate-700/50 p-12 max-w-md mx-auto group hover:shadow-xl transition-all duration-300">
-              <div className="relative mb-6">
-                <div className="absolute inset-0 bg-gradient-to-r from-blue-100/50 to-indigo-100/50 dark:from-blue-900/30 dark:to-indigo-900/30 rounded-full blur-2xl group-hover:blur-xl transition-all duration-300"></div>
-                <Camera className="h-16 w-16 text-slate-400 dark:text-slate-500 mx-auto relative group-hover:text-blue-500 dark:group-hover:text-blue-400 transition-colors duration-300" />
+          <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="relative mb-8">
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
+              <div className="relative bg-white/10 dark:bg-gray-800/10 backdrop-blur-xl rounded-2xl p-8 border border-white/20 dark:border-gray-700/20">
+                <Camera className="h-12 w-12 text-indigo-400 mx-auto" />
               </div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-3">
-                {searchTerm ? 'No screenshots found' : 'No screenshots yet'}
-              </h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
-                {searchTerm 
-                  ? 'Try adjusting your search terms or clear filters'
-                  : 'Create your first screenshot to start building your collection'
-                }
-              </p>
-              {!searchTerm && (
+            </div>
+            
+            <h3 className="text-2xl font-semibold text-gray-900 dark:text-white mb-3 text-center">
+              {searchTerm ? 'No results found' : 'Start capturing screenshots'}
+            </h3>
+            
+            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-md text-center">
+              {searchTerm 
+                ? 'Try different search terms or clear your filters'
+                : 'Create individual screenshots or collections to get started'
+              }
+            </p>
+            
+            {!searchTerm && (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <button 
-                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 flex items-center justify-center transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] shadow-lg hover:shadow-xl font-medium"
                   onClick={() => setShowAddModal(true)}
+                  className="px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl hover:from-indigo-700 hover:to-purple-700 flex items-center justify-center transition-all duration-200 transform hover:scale-[1.02] shadow-lg hover:shadow-xl font-medium"
                 >
-                  <Plus className="h-5 w-5 mr-2" />
+                  <Plus className="h-4 w-4 mr-2" />
                   Add Screenshot
                 </button>
-              )}
-            </div>
+              </div>
+            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+            {/* Show processing collections FIRST - at the beginning of the grid */}
+            {Object.values(collectionProgress)
+              .filter(progress => progress.progress < 100)
+              .sort((a, b) => {
+                // Sort by start time - most recent first
+                const dateA = new Date(a.startTime || 0)
+                const dateB = new Date(b.startTime || 0)
+                return dateB.getTime() - dateA.getTime()
+              })
+              .map((progress) => (
+                <div
+                  key={progress.collectionId}
+                  className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-purple-50/90 via-indigo-50/80 to-blue-50/70 dark:from-purple-900/30 dark:via-indigo-900/25 dark:to-blue-900/20 backdrop-blur-xl shadow-2xl border border-purple-200/60 dark:border-purple-700/60 hover:shadow-3xl transition-all duration-500 hover:scale-[1.02] hover:-translate-y-1"
+                >
+                  {/* Stunning Background Effects */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 via-indigo-500/5 to-blue-500/10"></div>
+                  <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-purple-400/30 via-indigo-400/20 to-transparent rounded-full blur-2xl animate-pulse"></div>
+                  <div className="absolute -bottom-4 -left-4 w-20 h-20 bg-gradient-to-tr from-blue-400/25 via-purple-400/15 to-transparent rounded-full blur-xl animate-pulse" style={{animationDelay: '1s'}}></div>
+                  
+                  {/* Enhanced Progress Badge */}
+                  <div className="absolute top-4 right-4 z-10">
+                    <div className="bg-gradient-to-r from-purple-100/90 to-indigo-100/90 dark:from-purple-800/80 dark:to-indigo-800/80 text-purple-700 dark:text-purple-300 px-3 py-2 rounded-2xl text-xs font-bold backdrop-blur-sm border border-purple-200/50 dark:border-purple-600/50 shadow-lg">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-purple-300 dark:border-purple-500 border-t-purple-600 dark:border-t-purple-300"></div>
+                          <div className="absolute inset-0 rounded-full bg-purple-400/20 animate-ping"></div>
+                        </div>
+                        <span>{progress.progress || 0}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Stunning Processing Preview */}
+                  <div className="relative h-52 bg-gradient-to-br from-purple-100/80 via-indigo-100/60 to-blue-100/40 dark:from-purple-800/60 dark:via-indigo-800/50 dark:to-blue-800/40 rounded-t-3xl overflow-hidden flex items-center justify-center">
+                    {/* Animated background pattern */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-4 left-4 w-2 h-2 bg-purple-400 rounded-full animate-bounce"></div>
+                      <div className="absolute top-8 right-8 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
+                      <div className="absolute bottom-6 left-8 w-1 h-1 bg-blue-400 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
+                      <div className="absolute bottom-4 right-6 w-2.5 h-2.5 bg-purple-300 rounded-full animate-bounce" style={{animationDelay: '1.5s'}}></div>
+                    </div>
+                    
+                    <div className="text-center relative z-10">
+                      <div className="relative mb-4">
+                        <div className="animate-spin rounded-full h-20 w-20 border-4 border-purple-300/50 dark:border-purple-500/50 border-t-purple-600 dark:border-t-purple-300 mx-auto shadow-lg"></div>
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400/20 to-indigo-400/20 animate-ping"></div>
+                      </div>
+                      <p className="text-purple-800 dark:text-purple-200 font-bold text-lg">
+                        {progress.type === 'crawl' ? '🔍 Crawling in Progress' : 
+                         progress.type === 'frame' ? '🎬 Processing Frames' : 
+                         progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? '🔍 Crawling in Progress' :
+                         progress.stage?.includes('frame') || progress.stage?.includes('Frame') || progress.stage?.includes('captures') ? '🎬 Processing Frames' :
+                         '⚡ Processing Collection'}
+                      </p>
+                      <p className="text-purple-600 dark:text-purple-300 text-sm mt-2 font-medium">{progress.stage || 'Processing...'}</p>
+                      {progress.url && (
+                        <p className="text-purple-500 dark:text-purple-400 text-xs mt-2 truncate px-4 py-1 bg-white/50 dark:bg-slate-800/50 rounded-lg backdrop-blur-sm">
+                          {progress.url}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Processing Info */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                          {progress.type === 'crawl' ? 'Crawl Collection' : 
+                           progress.type === 'frame' ? 'Frame Collection' : 
+                           progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? 'Crawl Collection' :
+                           progress.stage?.includes('frame') || progress.stage?.includes('Frame') || progress.stage?.includes('captures') ? 'Frame Collection' :
+                           'Collection'}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {progress.stage || `${progress.completedScreenshots || 0} of ${progress.totalScreenshots || 0} screenshots`}
+                        </p>
+                        {progress.url && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 truncate mt-1">
+                            {progress.url}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-full">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium text-purple-700 dark:text-purple-400">
+                          {progress.progress || 0}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2">
+                      <div 
+                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progress.progress || 0}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            }
+            
+            {/* Show processing screenshots SECOND - individual screenshot progress cards */}
+            {Object.values(screenshotProgress)
+              .filter(progress => progress.status === 'processing')
+              .filter(progress => !filteredScreenshots.find(s => (s.id || s._id) === progress.screenshotId))
+              .filter(() => !Object.values(collectionProgress).some(cp => cp.progress < 100)) // Hide when collections active
+              .map((progress) => (
+                <div
+                  key={progress.screenshotId}
+                  className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50/90 via-indigo-50/80 to-cyan-50/70 dark:from-blue-900/30 dark:via-indigo-900/25 dark:to-cyan-900/20 backdrop-blur-2xl shadow-xl border border-blue-200/60 dark:border-blue-700/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01]"
+                >
+                  {/* Enhanced Background Pattern */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100/30 via-indigo-100/20 to-transparent dark:from-blue-800/20 dark:via-indigo-800/15"></div>
+                  <div className="absolute -top-2 -right-2 w-16 h-16 bg-gradient-to-br from-blue-200/30 to-transparent dark:from-blue-700/30 rounded-full blur-xl group-hover:from-blue-300/40 dark:group-hover:from-blue-600/40 transition-all duration-300"></div>
+                  
+                  {/* Progress Badge */}
+                  <div className="absolute top-4 right-4 z-10">
+                    <div className="bg-blue-100/90 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-300 dark:border-blue-500 border-t-blue-600 dark:border-t-blue-300"></div>
+                          <div className="absolute inset-0 rounded-full bg-blue-400/20 animate-ping"></div>
+                        </div>
+                        <span className="truncate max-w-[120px]">{progress.progress}%</span>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Stunning Processing Preview */}
+                  <div className="relative h-52 bg-gradient-to-br from-blue-100/80 via-indigo-100/60 to-cyan-100/40 dark:from-blue-800/60 dark:via-indigo-800/50 dark:to-cyan-800/40 rounded-t-3xl overflow-hidden flex items-center justify-center">
+                    {/* Animated background pattern */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-4 left-4 w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                      <div className="absolute top-8 right-8 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
+                      <div className="absolute bottom-6 left-8 w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
+                      <div className="absolute bottom-4 right-6 w-2.5 h-2.5 bg-blue-300 rounded-full animate-bounce" style={{animationDelay: '1.5s'}}></div>
+                    </div>
+                    
+                    <div className="text-center relative z-10">
+                      <div className="relative mb-4">
+                        <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-300/50 dark:border-blue-500/50 border-t-blue-600 dark:border-t-blue-300 mx-auto shadow-lg"></div>
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-indigo-400/20 animate-ping"></div>
+                      </div>
+                      <p className="text-blue-800 dark:text-blue-200 font-bold text-lg">
+                        {progress.stage?.includes('trigger') || progress.stage?.includes('Trigger') ? '🎯 Processing Triggers' :
+                         progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? '🔍 Crawling Page' :
+                         '📸 Processing Screenshot'}
+                      </p>
+                      <p className="text-blue-600 dark:text-blue-300 text-sm mt-2 font-medium truncate px-4">{progress.stage || 'Processing...'}</p>
+                      {progress.url && (
+                        <p className="text-blue-500 dark:text-blue-400 text-xs mt-2 truncate px-4 py-1 bg-white/50 dark:bg-slate-800/50 rounded-lg backdrop-blur-sm max-w-[200px] mx-auto">
+                          {progress.url}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Processing Info */}
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0 pr-3">
+                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
+                          {progress.stage?.includes('trigger') || progress.stage?.includes('Trigger') ? 'Trigger Screenshot' :
+                           progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? 'Crawl Screenshot' :
+                           'Processing Screenshot'}
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                          {progress.stage || `${progress.completedScreenshots || 0} of ${progress.totalScreenshots || 1} screenshots`}
+                        </p>
+                        {progress.screenshotId && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 truncate mt-1">
+                            ID: {progress.screenshotId.slice(-8)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full flex-shrink-0">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                        <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
+                          {progress.progress}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    {/* Progress Bar */}
+                    <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
+                      <div 
+                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                        style={{ width: `${progress.progress}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              ))
+            }
+            
+            {/* Show existing screenshots LAST */}
             {filteredScreenshots.map((screenshot) => {
               const screenshotId = screenshot.id || screenshot._id
               
@@ -594,21 +1132,7 @@ const ProjectDetailPage: React.FC = () => {
                                  (screenshot.metadata as any)?.isCollection ||
                                  (screenshot as any).name !== undefined
               
-              // Debug log to understand data structure
-              if (process.env.NODE_ENV === 'development') {
-                console.log('Screenshot data:', {
-                  id: screenshotId,
-                  isFromCollection: screenshot.isFromCollection,
-                  type: screenshot.type,
-                  status: screenshot.status,
-                  collectionId: screenshot.collectionId,
-                  frameCount: screenshot.frameCount,
-                  url: screenshot.url,
-                  name: (screenshot as any).name,
-                  title: screenshot.title,
-                  isCollection
-                })
-              }
+              // Collection detection logic
               
               return (
                 <div
@@ -619,43 +1143,28 @@ const ProjectDetailPage: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-slate-50/30 to-transparent dark:from-slate-700/20"></div>
                   <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-blue-100/20 to-transparent dark:from-blue-900/20 rounded-full blur-xl group-hover:from-blue-200/30 dark:group-hover:from-blue-800/30 transition-all duration-300"></div>
                   
-                  {/* Socket Progress Indicators */}
+                  {/* Status Badge - Only show for completed, failed, or pending without socket progress */}
                   {(() => {
-                    // Check for individual screenshot progress
+                    // Check for active socket progress
                     const progress = screenshotProgress[screenshotId!]
-                    // Check for collection progress - use the screenshot ID for collections
                     const collectionId = isCollection ? screenshotId : screenshot.collectionId
                     const collProgress = collectionId ? collectionProgress[collectionId] : null
                     
-                    // Show individual screenshot progress
-                    if (progress && progress.status === 'processing') {
-                      return (
-                        <div className="absolute top-4 right-4 z-10">
-                          <div className="bg-blue-50/90 text-blue-700 dark:bg-blue-900/80 dark:text-blue-300 px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50 shadow-lg">
-                            <div className="flex items-center space-x-2">
-                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent"></div>
-                              <span>{progress.progress}% - {progress.stage}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )
+                    // Check if there are any active collections being processed
+                    const hasActiveCollections = Object.values(collectionProgress).some(cp => cp.progress < 100)
+                    
+                    // AGGRESSIVE: Hide ALL individual progress when collections are active
+                    // This ensures only collection progress cards show, no individual indicators
+                    if (hasActiveCollections) {
+                      return null
                     }
                     
-                    // Show collection progress
-                    if (collProgress && collProgress.progress < 100) {
-                      return (
-                        <div className="absolute top-4 right-4 z-10">
-                          <div className="bg-indigo-50/90 text-indigo-700 dark:bg-indigo-900/80 dark:text-indigo-300 px-3 py-1.5 rounded-xl text-xs font-semibold backdrop-blur-sm border border-indigo-200/50 dark:border-indigo-700/50 shadow-lg">
-                            <div className="flex items-center space-x-2">
-                              <div className="animate-spin rounded-full h-3 w-3 border-2 border-current border-t-transparent"></div>
-                              <span>{collProgress.progress}% - {collProgress.stage}</span>
-                            </div>
-                          </div>
-                        </div>
-                      )
+                    // Don't show any indicators if there's active socket progress for this specific item
+                    if (progress?.status === 'processing' || (collProgress && collProgress.progress < 100)) {
+                      return null
                     }
                     
-                    // Fallback to status badge for non-socket progress
+                    // Only show status badge for non-completed items without active progress
                     if (screenshot.status !== 'completed') {
                       return (
                         <div className="absolute top-4 right-4 z-10">
@@ -743,12 +1252,22 @@ const ProjectDetailPage: React.FC = () => {
                       )}
                     </div>
                     
-                    {/* Metadata */}
-                    {screenshot.metadata?.timestamp && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-                        {new Date(screenshot.metadata.timestamp).toLocaleDateString()}
-                      </p>
-                    )}
+                    {/* Metadata - Show date for all screenshots */}
+                    {(() => {
+                      // Try multiple date sources for consistent date display
+                      const dateToShow = screenshot.metadata?.timestamp || 
+                                       screenshot.createdAt ||
+                                       screenshot.updatedAt
+                      
+                      if (dateToShow) {
+                        return (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                            {new Date(dateToShow).toLocaleDateString()}
+                          </p>
+                        )
+                      }
+                      return null
+                    })()}
                     
                     {/* Actions */}
                     <div className="flex items-center justify-between">
@@ -757,7 +1276,7 @@ const ProjectDetailPage: React.FC = () => {
                           <>
                             <Button
                               size="sm"
-                              variant="outline"
+                              className="bg-blue-600 hover:bg-blue-700 text-white border-none shadow-sm hover:shadow-md transition-all duration-200 ease-out"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 handleDownloadZip(screenshot)
@@ -768,7 +1287,7 @@ const ProjectDetailPage: React.FC = () => {
                             </Button>
                             <Button
                               size="sm"
-                              variant="outline"
+                              className="bg-indigo-600 hover:bg-indigo-700 text-white border-none shadow-sm hover:shadow-md transition-all duration-200 ease-out"
                               onClick={(e) => {
                                 e.stopPropagation()
                                 setPdfCollection(screenshot)
@@ -784,8 +1303,7 @@ const ProjectDetailPage: React.FC = () => {
                       
                       <Button
                         size="sm"
-                        variant="outline"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20"
+                        className="bg-red-600 hover:bg-red-700 text-white border-none shadow-sm hover:shadow-md transition-all duration-200 ease-out"
                         onClick={(e) => {
                           e.stopPropagation()
                           handleDeleteScreenshot(screenshot)
@@ -800,129 +1318,6 @@ const ProjectDetailPage: React.FC = () => {
               )
             })}
             
-            {/* Show processing screenshots that aren't in main list yet */}
-            {Object.values(screenshotProgress)
-              .filter(progress => progress.status === 'processing')
-              .filter(progress => !filteredScreenshots.find(s => (s.id || s._id) === progress.screenshotId))
-              .map((progress) => (
-                <div
-                  key={progress.screenshotId}
-                  className="group relative overflow-hidden rounded-2xl bg-blue-50 dark:bg-blue-900/20 backdrop-blur-2xl shadow-xl border border-blue-200 dark:border-blue-800 hover:shadow-2xl transition-all duration-300"
-                >
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-transparent"></div>
-                  
-                  {/* Progress Badge */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
-                      <div className="flex items-center space-x-1">
-                        <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
-                        <span>{progress.progress}% - {progress.stage}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Processing Preview */}
-                  <div className="relative h-48 bg-blue-100 dark:bg-blue-800 rounded-t-2xl overflow-hidden flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-300 border-t-blue-600 mx-auto mb-4"></div>
-                      <p className="text-blue-700 dark:text-blue-300 font-medium">Processing Screenshot...</p>
-                      <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">{progress.stage}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Processing Info */}
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                          Processing Screenshot...
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          ID: {progress.screenshotId}
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full">
-                        <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
-                          {progress.progress}%
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full bg-blue-200 dark:bg-blue-800 rounded-full h-2">
-                      <div 
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            }
-            
-            {/* Show processing collections that aren't in main list yet */}
-            {Object.values(collectionProgress)
-              .filter(progress => progress.progress < 100)
-              .filter(progress => !filteredScreenshots.find(s => (s.id || s._id) === progress.collectionId))
-              .map((progress) => (
-                <div
-                  key={progress.collectionId}
-                  className="group relative overflow-hidden rounded-2xl bg-purple-50 dark:bg-purple-900/20 backdrop-blur-2xl shadow-xl border border-purple-200 dark:border-purple-800 hover:shadow-2xl transition-all duration-300"
-                >
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-purple-100/20 to-transparent"></div>
-                  
-                  {/* Progress Badge */}
-                  <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 px-2 py-1 rounded-full text-xs font-medium">
-                      <div className="flex items-center space-x-1">
-                        <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
-                        <span>{progress.progress}% - {progress.stage}</span>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Processing Preview */}
-                  <div className="relative h-48 bg-purple-100 dark:bg-purple-800 rounded-t-2xl overflow-hidden flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-300 border-t-purple-600 mx-auto mb-4"></div>
-                      <p className="text-purple-700 dark:text-purple-300 font-medium">Processing Collection...</p>
-                      <p className="text-purple-600 dark:text-purple-400 text-sm mt-1">{progress.stage}</p>
-                    </div>
-                  </div>
-                  
-                  {/* Processing Info */}
-                  <div className="p-4 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                          Processing Collection...
-                        </h3>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          {progress.completedScreenshots} of {progress.totalScreenshots} screenshots
-                        </p>
-                      </div>
-                      <div className="flex items-center space-x-1 px-2 py-1 bg-purple-100 dark:bg-purple-900/30 rounded-full">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
-                        <span className="text-xs font-medium text-purple-700 dark:text-purple-400">
-                          {progress.progress}%
-                        </span>
-                      </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="w-full bg-purple-200 dark:bg-purple-800 rounded-full h-2">
-                      <div 
-                        className="bg-purple-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${progress.progress}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              ))
-            }
           </div>
         )}
       </div>
@@ -945,7 +1340,7 @@ const ProjectDetailPage: React.FC = () => {
           setShowFullImage(false)
           setSelectedScreenshot(null)
         }}
-        screenshot={selectedScreenshot}
+        screenshot={selectedScreenshot as any} // Type assertion to handle modal compatibility
         imageUrl={selectedScreenshot?._id ? imageUrls[selectedScreenshot._id] : undefined}
       />
       
@@ -956,7 +1351,7 @@ const ProjectDetailPage: React.FC = () => {
           setShowCollectionFrames(false)
           setSelectedCollection(null)
         }}
-        collection={selectedCollection}
+        collection={selectedCollection as any} // Type assertion to handle modal compatibility
         imageUrls={imageUrls}
         onViewImage={handleViewImage}
       />
@@ -968,7 +1363,7 @@ const ProjectDetailPage: React.FC = () => {
           setShowPDFModal(false)
           setPdfCollection(null)
         }}
-        collection={pdfCollection}
+        collection={pdfCollection as any} // Type assertion to handle modal compatibility
         type="collection"
         onGenerate={handleGeneratePDF}
       />
@@ -980,8 +1375,8 @@ const ProjectDetailPage: React.FC = () => {
           screenshotToDelete.isFromCollection || 
           screenshotToDelete.type === 'collection' || 
           (screenshotToDelete.frameCount && screenshotToDelete.frameCount > 1) ||
-          (screenshotToDelete.metadata as any)?.isCollection ||
-          (screenshotToDelete as any).name !== undefined
+          screenshotToDelete.metadata?.isCollection ||
+          screenshotToDelete.name !== undefined
         )
         
         return (
@@ -996,6 +1391,7 @@ const ProjectDetailPage: React.FC = () => {
             <div className="flex justify-end space-x-3">
               <Button
                 variant="outline"
+                className="transition-all duration-200 ease-out"
                 onClick={() => {
                   setShowDeleteModal(false)
                   setScreenshotToDelete(null)
@@ -1004,7 +1400,7 @@ const ProjectDetailPage: React.FC = () => {
                 Cancel
               </Button>
               <Button
-                className="bg-red-500 hover:bg-red-600 text-white"
+                className="bg-red-600 hover:bg-red-700 text-white transition-all duration-200 ease-out"
                 onClick={confirmDeleteScreenshot}
               >
                 Delete

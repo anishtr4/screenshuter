@@ -14,7 +14,26 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     throw createError('User not authenticated', 401);
   }
 
-  const { url, projectId, type = 'normal', timeFrames, autoScroll } = req.body;
+  const { 
+    url, 
+    projectId, 
+    type = 'normal', 
+    timeFrames, 
+    autoScroll,
+    // New screenshot options
+    cookiePrevention = true,
+    deviceScaleFactor = 2,
+    customCSS = '',
+    customJS = '',
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
+  } = req.body;
+  
+  // Extract trigger selectors for interactive screenshots
+  const { triggerSelectors } = req.body;
+  
   const userId = req.user.id;
   
   // Debug logging for autoScroll
@@ -61,6 +80,7 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       baseUrl: url,
       name: `Frame Screenshots of ${new URL(url).hostname} - ${new Date().toLocaleDateString()}`,
       type: 'frame',
+      status: 'processing', // Set to processing when starting
       metadata: {
         frameCount: validTimeFrames.length,
         timeFrames: validTimeFrames,
@@ -70,31 +90,22 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
 
     await collection.save();
 
-    // Create screenshot records for each time frame
+    // Don't create individual screenshot records yet - they'll be created during processing
+    // This prevents them from showing up in the UI before collection progress is established
     const screenshots = [];
+    
+    // Just prepare the data for job scheduling
     for (let i = 0; i < validTimeFrames.length; i++) {
       const frameDelay = validTimeFrames[i];
-      
-      const screenshot = new Screenshot({
-        projectId,
-        url,
-        imagePath: '', // Will be updated when captured
-        type: 'frame',
-        collectionId: collection._id,
-        status: 'pending',
-        metadata: {
-          frameDelay,
-          frameIndex: i + 1,
-          totalFrames: validTimeFrames.length
-        }
+      screenshots.push({
+        frameDelay,
+        frameIndex: i + 1,
+        totalFrames: validTimeFrames.length
       });
-
-      await screenshot.save();
-      screenshots.push(screenshot);
 
       // Debug logging for job data
       const jobData = {
-        screenshotId: screenshot._id.toString(),
+        collectionId: collection._id.toString(),
         url,
         projectId,
         userId,
@@ -102,7 +113,16 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
         frameIndex: i + 1,
         totalFrames: validTimeFrames.length,
         autoScroll: autoScroll || null,
-        isScrollCapture: false
+        isScrollCapture: false,
+        // Screenshot options
+        cookiePrevention,
+        deviceScaleFactor,
+        customCSS,
+        customJS,
+        // Authentication options
+        basicAuth,
+        // Cookie injection
+        customCookies
       };
       
       logger.info(`💼 Scheduling frame job`, {
@@ -122,7 +142,10 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       totalScreenshots: validTimeFrames.length,
       completedScreenshots: 0,
       progress: 0,
-      stage: `Starting ${validTimeFrames.length} frame captures...`
+      stage: `Starting ${validTimeFrames.length} frame captures...`,
+      url,
+      type: 'frame' as const,
+      startTime: Date.now()
     });
 
     logger.info(`Frame screenshot jobs scheduled for ${url}`, { 
@@ -143,11 +166,10 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
         createdAt: collection.createdAt
       },
       screenshots: screenshots.map(s => ({
-        id: s._id,
-        url: s.url,
-        frameDelay: s.metadata?.frameDelay,
-        frameIndex: s.metadata?.frameIndex,
-        status: s.status
+        frameDelay: s.frameDelay,
+        frameIndex: s.frameIndex,
+        totalFrames: s.totalFrames,
+        status: 'pending' // Screenshots will be created during processing
       })),
       frameCount: validTimeFrames.length,
       timeFrames: validTimeFrames
@@ -174,7 +196,18 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       url,
       projectId,
       userId,
-      type
+      type,
+      // Screenshot options
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      // Authentication options
+      basicAuth,
+      // Cookie injection
+      customCookies,
+      // Trigger selectors for interactive screenshots
+      triggerSelectors
     });
 
     logger.info(`Screenshot job scheduled for ${url}`, { 
@@ -204,7 +237,19 @@ export const createCrawlScreenshot = asyncHandler(async (req: Request, res: Resp
     throw createError('User not authenticated', 401);
   }
 
-  const { baseUrl, projectId } = req.body;
+  const { 
+    baseUrl, 
+    projectId,
+    // Screenshot options
+    cookiePrevention = true,
+    deviceScaleFactor = 2,
+    customCSS = '',
+    customJS = '',
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
+  } = req.body;
   const userId = req.user.id;
 
   // Validate project ID format
@@ -271,7 +316,19 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
     throw createError('User not authenticated', 401);
   }
 
-  const { collectionId, selectedUrls } = req.body;
+  const { 
+    collectionId, 
+    selectedUrls,
+    // Screenshot options
+    cookiePrevention = true,
+    deviceScaleFactor = 2,
+    customCSS = '',
+    customJS = '',
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
+  } = req.body;
   const userId = req.user.id;
 
   // Verify collection exists and user owns the project
@@ -321,7 +378,16 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
     collectionId: collection._id.toString(),
     urls: selectedUrls,
     projectId: project._id.toString(),
-    userId
+    userId,
+    // Screenshot options
+    cookiePrevention,
+    deviceScaleFactor,
+    customCSS,
+    customJS,
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
   });
 
   logger.info(`Crawl screenshot job scheduled`, { 
@@ -576,9 +642,10 @@ export const deleteCollection = asyncHandler(async (req: Request, res: Response)
     throw createError('Collection not found', 404);
   }
 
-  // Verify ownership
+  // Verify ownership - super admins can delete any collection
   const project = collection.projectId as any;
-  if (project.userId.toString() !== userId) {
+  const userRole = req.user?.role;
+  if (userRole !== 'super_admin' && project.userId.toString() !== userId.toString()) {
     throw createError('Access denied', 403);
   }
 

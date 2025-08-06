@@ -2,7 +2,7 @@
 
 ## Design System Overview
 
-The Screenshot SaaS application uses a modern design system based on a professional blue-indigo-slate color palette with glass morphism effects and smooth animations.
+The Screenshot SaaS application uses a modern design system based on a professional blue-indigo-slate color palette with intense glassmorphism effects, smooth butter-like animations, and compact layouts. The design emphasizes professional aesthetics suitable for business applications.
 
 ## Color Palette
 
@@ -50,58 +50,148 @@ The Screenshot SaaS application uses a modern design system based on a professio
 ## Layout Components
 
 ### DashboardLayout
-Main layout wrapper for all dashboard pages.
+Main layout wrapper for all dashboard pages with enhanced glassmorphism sidebar.
 
 ```tsx
 import { DashboardLayout } from '@/components/layout/DashboardLayout'
 
-<DashboardLayout title="Page Title" subtitle="Page description">
+<DashboardLayout>
   <div>Page content</div>
 </DashboardLayout>
 ```
 
-**Props:**
-- `title`: Page title
-- `subtitle`: Page description
-- `children`: Page content
+**Features:**
+- Ultra glassmorphism sidebar with 40px backdrop blur
+- Thunder icon in sidebar logo
+- Smooth hover animations (700ms duration)
+- Dual shimmer effects on menu items
+- Enhanced icon container animations with scale and rotation
+- Compact menu items with reduced padding
+- Professional gradient backgrounds
+- Mobile-friendly overlay
+- Dark mode support
+
+## Page Components
+
+### DashboardPage
+Main dashboard with project overview and statistics.
+
+```tsx
+import { DashboardPage } from '@/components/pages/DashboardPage'
+```
 
 **Features:**
-- Responsive sidebar navigation
-- Thunder icon in sidebar logo
-- Dark mode support
-- Mobile-friendly overlay
+- Project grid with glassmorphism cards
+- Hover shimmer effects
+- Statistics display with gradient pills
+- Recent activity tracking
+
+### ProjectsPage
+Project management page with enhanced grid layout.
+
+```tsx
+import { ProjectsPage } from '@/components/pages/ProjectsPage'
+```
+
+**Features:**
+- Enhanced glassmorphism project cards
+- Smooth hover animations
+- Project creation modal
+- Search and filtering
+
+### ProjectDetailPage
+Detailed project view with screenshots and collections.
+
+```tsx
+import { ProjectDetailPage } from '@/components/pages/ProjectDetailPage'
+```
+
+**Features:**
+- Professional grid action buttons
+- Collection management
+- Screenshot viewing and organization
+- PDF generation and ZIP downloads
+- Real-time progress tracking
+
+### ApiKeysPage
+API key management with enhanced security features.
+
+```tsx
+import { ApiKeysPage } from '@/components/pages/ApiKeysPage'
+```
+
+**Features:**
+- Shimmer loading states
+- Glassmorphism API key cards
+- Deletion confirmation modals
+- Compact layout design
+
+### ConfigsPage
+System configuration management.
+
+```tsx
+import { ConfigsPage } from '@/components/pages/ConfigsPage'
+```
+
+**Features:**
+- Enhanced loading states with shimmer effects
+- Glassmorphism config cards
+- Individual setting items with gradient backgrounds
+- Compact spacing and professional styling
+
+### UsersPage
+User management for administrators.
+
+```tsx
+import { UsersPage } from '@/components/pages/UsersPage'
+```
+
+**Features:**
+- Modern table design
+- Enhanced empty states
+- User role management
+- Bulk operations
+- Professional styling throughout
 
 ## UI Components
 
 ### Button
-Primary button component with gradient styling.
+Professional button component with subtle styling for business applications.
 
 ```tsx
 import { Button } from '@/components/ui/button'
 
-// Primary button
-<Button className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 px-6 py-2.5 rounded-xl font-semibold">
+// Primary button (professional style)
+<Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm hover:shadow-md transition-all duration-200 px-4 py-2 rounded-lg font-medium">
   Primary Action
 </Button>
 
-// Outline button
-<Button variant="outline" className="border-slate-200 hover:bg-slate-50 text-slate-700 dark:border-slate-700 dark:hover:bg-slate-800 dark:text-slate-300">
+// Secondary button
+<Button variant="outline" className="border-slate-300 hover:bg-slate-50 text-slate-700 dark:border-slate-600 dark:hover:bg-slate-800 dark:text-slate-300">
   Secondary Action
 </Button>
 
-// Ghost button
+// Danger button
 <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-900/20">
   <Trash2 className="h-4 w-4" />
+  Delete
+</Button>
+
+// Grid action buttons (professional)
+<Button className="bg-slate-600 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-sm font-medium transition-colors duration-200">
+  <Download className="h-4 w-4 mr-1" />
+  ZIP
 </Button>
 ```
 
 **Variants:**
-- `default`: Primary gradient button
+- `default`: Primary solid button
 - `outline`: Border button
 - `ghost`: Transparent button
+- `destructive`: Danger/delete button
 
 **Sizes:**
-- `sm`: Small button
+- `sm`: Small button (grid actions)
 - `default`: Default size
 - `lg`: Large button
 
@@ -194,8 +284,57 @@ Styled select element.
 
 ### Modal Components
 
+#### AddScreenshotModal
+Comprehensive modal for creating screenshots with various options.
+
+```tsx
+import { AddScreenshotModal } from '@/components/modals/AddScreenshotModal'
+
+<AddScreenshotModal
+  isOpen={showModal}
+  onClose={() => setShowModal(false)}
+  projectId={projectId}
+  onScreenshotAdded={handleScreenshotAdded}
+/>
+```
+
+**Features:**
+- Single screenshot capture
+- Frame screenshots with time intervals
+- Website crawling
+- Auto-scroll options
+- Real-time progress tracking
+
+#### CollectionFramesModal
+Modal for viewing collection screenshots with navigation.
+
+```tsx
+import { CollectionFramesModal } from '@/components/modals/CollectionFramesModal'
+
+<CollectionFramesModal
+  isOpen={showModal}
+  onClose={() => setShowModal(false)}
+  collection={collection}
+  screenshots={screenshots}
+/>
+```
+
+#### PDFConfigModal
+Modal for configuring PDF generation settings.
+
+```tsx
+import { PDFConfigModal } from '@/components/modals/PDFConfigModal'
+
+<PDFConfigModal
+  isOpen={showModal}
+  onClose={() => setShowModal(false)}
+  onGenerate={handlePDFGenerate}
+  type="collection" // or "project"
+/>
+```
+
 #### ConfirmationModal
-Reusable confirmation dialog.
+Reusable confirmation dialog with professional styling.
 
 ```tsx
 import { ConfirmationModal } from '@/components/modals/ConfirmationModal'
@@ -204,25 +343,26 @@ import { ConfirmationModal } from '@/components/modals/ConfirmationModal'
   isOpen={showModal}
   onClose={() => setShowModal(false)}
   onConfirm={handleConfirm}
-  title="Delete Item"
-  description="Are you sure you want to delete this item? This action cannot be undone."
+  title="Delete Collection"
+  description="Are you sure you want to delete this collection? This action cannot be undone."
   confirmText="Delete"
   type="danger"
-  icon="delete"
 />
 ```
 
-**Props:**
-- `isOpen`: Modal visibility
-- `onClose`: Close handler
-- `onConfirm`: Confirm handler
-- `title`: Modal title
-- `description`: Modal description
-- `confirmText`: Confirm button text (default: "Confirm")
-- `cancelText`: Cancel button text (default: "Cancel")
-- `type`: "danger" | "warning" | "info" (default: "danger")
-- `icon`: "delete" | "user" | "key" | "shield" | "warning"
-- `loading`: Loading state
+#### FullImageModal
+Modal for viewing full-size screenshots.
+
+```tsx
+import { FullImageModal } from '@/components/modals/FullImageModal'
+
+<FullImageModal
+  isOpen={showModal}
+  onClose={() => setShowModal(false)}
+  imageUrl={imageUrl}
+  title={screenshotTitle}
+/>
+```
 
 ### Badge Components
 
@@ -347,28 +487,80 @@ Engaging empty state with call-to-action.
 
 ## Animation Classes
 
-### Transitions
+### Smooth Transitions
 ```css
-/* Standard transition */
-.transition-all { transition: all 0.3s ease; }
+/* Professional button transitions */
+.transition-colors { transition: background-color 0.2s ease, color 0.2s ease; }
 
-/* Quick transition */
-.transition-quick { transition: all 0.2s ease; }
+/* Butter-smooth sidebar animations */
+.transition-all { transition: all 0.7s ease-out; }
 
-/* Slow transition */
-.transition-slow { transition: all 0.5s ease; }
+/* Quick interactions */
+.transition-quick { transition: all 0.2s ease-out; }
+
+/* Slow, smooth effects */
+.transition-slow { transition: all 0.7s ease-out; }
 ```
 
 ### Hover Effects
 ```css
-/* Scale on hover */
-.hover-scale:hover { transform: scale(1.05); }
+/* Subtle scale for professional look */
+.hover-scale:hover { transform: scale(1.02); }
 
-/* Shadow on hover */
-.hover-shadow:hover { box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); }
+/* Enhanced shadows */
+.hover-shadow:hover { box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); }
 
-/* Lift on hover */
-.hover-lift:hover { transform: translateY(-2px); }
+/* Smooth lift effect */
+.hover-lift:hover { transform: translateY(-1px); }
+
+/* Shimmer effect for cards */
+.shimmer-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-effect::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transition: left 0.5s ease;
+}
+
+.shimmer-effect:hover::before {
+  left: 100%;
+}
+```
+
+### Glassmorphism Effects
+```css
+/* Ultra glassmorphism */
+.glass-ultra {
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(40px);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+}
+
+/* Standard glassmorphism */
+.glass-standard {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Dark mode glassmorphism */
+.dark .glass-ultra {
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(71, 85, 105, 0.4);
+}
 ```
 
 ## Responsive Design

@@ -1,8 +1,9 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { X, Download, Eye, Grid, List, Archive } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toast } from 'sonner'
 import { apiClient } from '../../lib/api'
+import { useSocket } from '../../hooks/useSocket'
 
 interface Screenshot {
   id: string
@@ -43,6 +44,58 @@ export const CollectionFramesModal = ({
 }: CollectionFramesModalProps) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [downloading, setDownloading] = useState(false)
+  const [dynamicFrames, setDynamicFrames] = useState<Screenshot[]>([])
+  
+  // Get socket data for real-time updates
+  const { screenshotProgress } = useSocket()
+  
+  // Initialize dynamic frames from collection
+  useEffect(() => {
+    if (collection) {
+      const initialFrames = collection.screenshots || collection.frames || []
+      setDynamicFrames(initialFrames)
+    }
+  }, [collection])
+  
+  // Listen for real-time screenshot completions
+  useEffect(() => {
+    if (!collection?.id) return
+    
+    // Check for completed screenshots that belong to this collection
+    Object.values(screenshotProgress).forEach((progress) => {
+      if (progress.status === 'completed' && 
+          progress.collectionId === collection.id) {
+        
+        // Create screenshot object from socket progress data
+        const newFrame: Screenshot = {
+          id: progress.screenshotId,
+          _id: progress.screenshotId,
+          url: progress.url || 'Unknown URL',
+          title: progress.metadata?.title || 'Frame Screenshot',
+          metadata: {
+            title: progress.metadata?.title || 'Frame Screenshot'
+          },
+          status: 'completed',
+          createdAt: progress.createdAt || new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          imageUrl: progress.imagePath,
+          thumbnailUrl: progress.thumbnailPath
+        }
+        
+        // Add to dynamic frames if not already present
+        setDynamicFrames(prev => {
+          const exists = prev.some(frame => 
+            (frame.id === newFrame.id || frame._id === newFrame._id)
+          )
+          if (!exists) {
+            console.log('🖼️ Adding new frame to collection modal:', newFrame.id)
+            return [...prev, newFrame]
+          }
+          return prev
+        })
+      }
+    })
+  }, [screenshotProgress, collection?.id])
   
   const getImageUrl = useCallback((screenshotId: string) => {
     return imageUrls[screenshotId] || null
@@ -101,7 +154,8 @@ export const CollectionFramesModal = ({
 
   if (!isOpen || !collection) return null
 
-  const frames = collection.screenshots || collection.frames || []
+  // Use dynamic frames for real-time updates, fallback to static collection frames
+  const frames = dynamicFrames.length > 0 ? dynamicFrames : (collection.screenshots || collection.frames || [])
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">

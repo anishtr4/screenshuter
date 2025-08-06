@@ -115,19 +115,67 @@ class ApiClient {
     }
     
     if (options) {
-      // Extract autoScroll from options and put it at root level (backend expects it there)
-      if (options.autoScroll) {
-        payload.autoScroll = options.autoScroll
+      // Extract special options that go at root level
+      const { 
+        autoScroll, 
+        basicAuth, 
+        customCookies,
+        triggerSelectors,
+        cookiePrevention,
+        deviceScaleFactor,
+        customCSS,
+        customJS,
+        ...otherOptions 
+      } = options
+      
+      // AutoScroll goes at root level for frame screenshots
+      if (autoScroll) {
+        payload.autoScroll = autoScroll
       }
       
-      // Put other options in options object
-      const { autoScroll, ...otherOptions } = options
-      if (Object.keys(otherOptions).length > 0) {
-        payload.options = otherOptions
+      // Authentication options go at root level
+      if (basicAuth && basicAuth.username && basicAuth.password) {
+        payload.basicAuth = basicAuth
+      }
+      
+      if (customCookies && customCookies.length > 0) {
+        payload.customCookies = customCookies
+      }
+      
+      // Trigger selectors go at root level for interactive screenshots
+      if (triggerSelectors && triggerSelectors.length > 0) {
+        console.log('🎯 API Client - Adding trigger selectors to payload:', triggerSelectors)
+        payload.triggerSelectors = triggerSelectors
+      }
+      
+      // Configuration options go in options object
+      const configOptions: any = {}
+      
+      if (cookiePrevention !== undefined) {
+        configOptions.cookiePrevention = cookiePrevention
+      }
+      
+      if (deviceScaleFactor !== undefined) {
+        configOptions.deviceScaleFactor = deviceScaleFactor
+      }
+      
+      if (customCSS) {
+        configOptions.customCSS = customCSS
+      }
+      
+      if (customJS) {
+        configOptions.customJS = customJS
+      }
+      
+      // Add any other options
+      Object.assign(configOptions, otherOptions)
+      
+      if (Object.keys(configOptions).length > 0) {
+        payload.options = configOptions
       }
     }
     
-    console.log('🚀 API Client - Frame screenshot payload:', JSON.stringify(payload, null, 2))
+    console.log('🚀 API Client - Screenshot payload:', JSON.stringify(payload, null, 2))
     
     const response = await this.client.post(`/screenshots`, payload)
     return response.data

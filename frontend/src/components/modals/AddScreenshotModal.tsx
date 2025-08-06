@@ -12,7 +12,18 @@ import {
   Settings,
   Clock,
   ArrowDown,
-  Loader2
+  Loader2,
+  Shield,
+  Key,
+  Cookie,
+  Code,
+  ChevronDown,
+  ChevronUp,
+  Trash2,
+  Eye,
+  EyeOff,
+  MousePointer,
+  Plus
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api'
@@ -27,6 +38,10 @@ export interface ScreenshotFormData {
     width: number
     height: number
     waitTime: number
+    cookiePrevention?: boolean
+    deviceScaleFactor?: number
+    customCSS?: string
+    customJS?: string
   }
   crawlOptions?: {
     maxDepth: number
@@ -42,6 +57,19 @@ export interface ScreenshotFormData {
       interval: number
     }
   }
+  // Authentication options
+  basicAuth?: {
+    username: string
+    password: string
+  }
+  customCookies?: string // JSON string for cookie array
+  // Trigger selectors for interactive screenshots
+  triggerSelectors?: Array<{
+    selector: string
+    delay: number
+    waitAfter: number
+    description?: string
+  }>
   // New crawl workflow properties
   selectedUrls?: string[]
   collectionId?: string
@@ -70,7 +98,11 @@ export function AddScreenshotModal({
       fullPage: true,
       width: 1920,
       height: 1080,
-      waitTime: 2000
+      waitTime: 2000,
+      cookiePrevention: true,
+      deviceScaleFactor: 2,
+      customCSS: '',
+      customJS: ''
     },
     crawlOptions: {
       maxDepth: 2,
@@ -93,6 +125,13 @@ export function AddScreenshotModal({
   const [discoveredUrls, setDiscoveredUrls] = useState<string[]>([])
   const [selectedUrls, setSelectedUrls] = useState<string[]>([])
   const [collectionId, setCollectionId] = useState<string>('')
+  
+  // UI state for collapsible sections
+  const [showAuthOptions, setShowAuthOptions] = useState(false)
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
+  const [showPasswordAuth, setShowPasswordAuth] = useState(false)
+  const [showTriggerOptions, setShowTriggerOptions] = useState(false)
+
 
   if (!isOpen) return null
 
@@ -167,7 +206,10 @@ export function AddScreenshotModal({
         const crawlData = {
           ...formData,
           selectedUrls,
-          collectionId
+          collectionId,
+          // Include authentication fields
+          basicAuth: formData.basicAuth,
+          customCookies: formData.customCookies
         }
         onSubmit(crawlData)
         onClose()
@@ -182,6 +224,9 @@ export function AddScreenshotModal({
       const frameData = {
         ...formData,
         timeFrames: formData.frameOptions?.timeFrames,
+        // Include authentication fields at root level
+        basicAuth: formData.basicAuth,
+        customCookies: formData.customCookies,
         options: {
           ...formData.options,
           autoScroll: formData.frameOptions?.autoScroll
@@ -191,8 +236,18 @@ export function AddScreenshotModal({
       console.log('🎬 Frame screenshot data being submitted:', frameData)
       onSubmit(frameData)
     } else {
-      // Normal single page screenshot
-      onSubmit(formData)
+      // Normal single page screenshot - ensure authentication fields are included
+      const normalData = {
+        ...formData,
+        // Explicitly include authentication fields
+        basicAuth: formData.basicAuth,
+        customCookies: formData.customCookies,
+        // Include trigger selectors for interactive screenshots
+        triggerSelectors: formData.triggerSelectors
+      }
+      
+      console.log('📸 Normal screenshot data being submitted:', normalData)
+      onSubmit(normalData)
     }
   }
 
@@ -730,6 +785,337 @@ export function AddScreenshotModal({
                   </label>
                 </div>
               </div>
+
+              {/* Authentication Options */}
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAuthOptions(!showAuthOptions)}
+                  className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <Shield className="h-4 w-4" />
+                  Authentication Options
+                  {showAuthOptions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                
+                {showAuthOptions && (
+                  <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                    {/* HTTP Basic Authentication */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Key className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">HTTP Basic Authentication</span>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">Username</label>
+                          <Input
+                            type="text"
+                            placeholder="Username"
+                            value={formData.basicAuth?.username || ''}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              basicAuth: {
+                                username: e.target.value,
+                                password: prev.basicAuth?.password || ''
+                              }
+                            }))}
+                            className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-slate-600 dark:text-slate-400 mb-1 block">Password</label>
+                          <div className="relative">
+                            <Input
+                              type={showPasswordAuth ? "text" : "password"}
+                              placeholder="Password"
+                              value={formData.basicAuth?.password || ''}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                basicAuth: {
+                                  username: prev.basicAuth?.username || '',
+                                  password: e.target.value
+                                }
+                              }))}
+                              className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm pr-10"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowPasswordAuth(!showPasswordAuth)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                              {showPasswordAuth ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Custom Cookies */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Cookie className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Custom Cookies (JSON)</span>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Paste cookies as JSON array from Chrome extension or browser DevTools. 
+                          <br />Example: <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">[{'{"name":"session","value":"abc123","domain":".example.com"}'}]</code>
+                        </p>
+                        
+                        <textarea
+                          placeholder='[{"name":"session_token","value":"abc123","domain":".example.com","path":"/","secure":true,"httpOnly":true}]'
+                          value={formData.customCookies ? JSON.stringify(formData.customCookies, null, 2) : ''}
+                          onChange={(e) => {
+                            try {
+                              if (!e.target.value.trim()) {
+                                setFormData(prev => ({ ...prev, customCookies: undefined }))
+                                return
+                              }
+                              const cookies = JSON.parse(e.target.value)
+                              if (Array.isArray(cookies)) {
+                                setFormData(prev => ({ ...prev, customCookies: e.target.value }))
+                              }
+                            } catch (error) {
+                              // Invalid JSON, don't update state
+                              console.warn('Invalid cookie JSON:', error)
+                            }
+                          }}
+                          className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-xs font-mono"
+                          rows={4}
+                        />
+                        
+                        {/* Cookie count indicator */}
+                        {formData.customCookies && formData.customCookies.length > 0 && (
+                          <div className="flex items-center gap-2 text-xs text-green-600 dark:text-green-400">
+                            <Cookie className="h-3 w-3" />
+                            <span>{formData.customCookies.length} cookie(s) loaded</span>
+                            <button
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, customCookies: undefined }))}
+                              className="text-red-500 hover:text-red-700 ml-2"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Advanced Options */}
+              <div className="space-y-4">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                  className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                >
+                  <Settings className="h-4 w-4" />
+                  Advanced Options
+                  {showAdvancedOptions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+                
+                {showAdvancedOptions && (
+                  <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                    {/* Device Scale Factor */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block font-medium">
+                        Device Scale Factor (Resolution)
+                      </label>
+                      <select
+                        value={formData.options.deviceScaleFactor}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          options: { ...prev.options, deviceScaleFactor: parseFloat(e.target.value) }
+                        }))}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm"
+                      >
+                        <option value={1}>1x (Standard)</option>
+                        <option value={2}>2x (High DPI)</option>
+                        <option value={3}>3x (Ultra High DPI)</option>
+                      </select>
+                    </div>
+
+                    {/* Cookie Prevention */}
+                    <div className="flex items-center space-x-3">
+                      <input
+                        type="checkbox"
+                        id="cookiePrevention"
+                        checked={formData.options.cookiePrevention}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          options: { ...prev.options, cookiePrevention: e.target.checked }
+                        }))}
+                        className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
+                      />
+                      <label htmlFor="cookiePrevention" className="text-sm text-slate-700 dark:text-slate-300 font-medium">
+                        Block cookie banners and tracking scripts
+                      </label>
+                    </div>
+
+                    {/* Custom CSS */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block font-medium flex items-center gap-1">
+                        <Code className="h-4 w-4" />
+                        Custom CSS
+                      </label>
+                      <textarea
+                        placeholder="/* Custom CSS to inject into the page */"
+                        value={formData.options.customCSS}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          options: { ...prev.options, customCSS: e.target.value }
+                        }))}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                        rows={3}
+                      />
+                    </div>
+
+                    {/* Custom JavaScript */}
+                    <div>
+                      <label className="text-sm text-slate-700 dark:text-slate-300 mb-2 block font-medium flex items-center gap-1">
+                        <Code className="h-4 w-4" />
+                        Custom JavaScript
+                      </label>
+                      <textarea
+                        placeholder="// Custom JavaScript to execute on the page"
+                        value={formData.options.customJS}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          options: { ...prev.options, customJS: e.target.value }
+                        }))}
+                        className="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                        rows={3}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Trigger Selectors - Only for individual screenshots */}
+              {formData.mode === 'normal' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowTriggerOptions(!showTriggerOptions)}
+                    className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    <MousePointer className="h-4 w-4" />
+                    Interactive Triggers
+                    {showTriggerOptions ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                  
+                  {showTriggerOptions && (
+                    <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-700">
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                        Add CSS selectors to click before capturing screenshots. The system will capture a screenshot after each interaction.
+                      </p>
+                      
+                      <div className="space-y-3">
+                        {(formData.triggerSelectors || []).map((trigger, index) => (
+                          <div key={index} className="grid grid-cols-12 gap-2 items-end">
+                            <div className="col-span-5">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                CSS Selector
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="e.g., .button, #menu-toggle"
+                                value={trigger.selector}
+                                onChange={(e) => {
+                                  const newTriggers = [...(formData.triggerSelectors || [])]
+                                  newTriggers[index] = { ...trigger, selector: e.target.value }
+                                  setFormData(prev => ({ ...prev, triggerSelectors: newTriggers }))
+                                }}
+                                className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                Delay (ms)
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="1000"
+                                value={trigger.delay}
+                                onChange={(e) => {
+                                  const newTriggers = [...(formData.triggerSelectors || [])]
+                                  newTriggers[index] = { ...trigger, delay: parseInt(e.target.value) || 0 }
+                                  setFormData(prev => ({ ...prev, triggerSelectors: newTriggers }))
+                                }}
+                                className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                Wait After (ms)
+                              </label>
+                              <input
+                                type="number"
+                                placeholder="2000"
+                                value={trigger.waitAfter}
+                                onChange={(e) => {
+                                  const newTriggers = [...(formData.triggerSelectors || [])]
+                                  newTriggers[index] = { ...trigger, waitAfter: parseInt(e.target.value) || 0 }
+                                  setFormData(prev => ({ ...prev, triggerSelectors: newTriggers }))
+                                }}
+                                className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
+                              />
+                            </div>
+                            <div className="col-span-2">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                Description
+                              </label>
+                              <input
+                                type="text"
+                                placeholder="Optional"
+                                value={trigger.description || ''}
+                                onChange={(e) => {
+                                  const newTriggers = [...(formData.triggerSelectors || [])]
+                                  newTriggers[index] = { ...trigger, description: e.target.value }
+                                  setFormData(prev => ({ ...prev, triggerSelectors: newTriggers }))
+                                }}
+                                className="w-full px-2 py-1 text-xs rounded border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800"
+                              />
+                            </div>
+                            <div className="col-span-1">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newTriggers = (formData.triggerSelectors || []).filter((_, i) => i !== index)
+                                  setFormData(prev => ({ ...prev, triggerSelectors: newTriggers }))
+                                }}
+                                className="w-full p-1 text-red-500 hover:text-red-700 transition-colors"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                        
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const newTrigger = { selector: '', delay: 1000, waitAfter: 2000, description: '' }
+                            setFormData(prev => ({ 
+                              ...prev, 
+                              triggerSelectors: [...(prev.triggerSelectors || []), newTrigger] 
+                            }))
+                          }}
+                          className="w-full py-2 px-3 text-sm text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-600 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Plus className="h-4 w-4" />
+                          Add Trigger Selector
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Action Buttons */}
               <div className="flex gap-3 pt-4">
