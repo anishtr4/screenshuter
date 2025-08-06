@@ -12,7 +12,22 @@ export const agenda = new Agenda({
 
 // Job definitions
 agenda.define('capture-screenshot', async (job: any) => {
-  const { screenshotId, url, projectId, userId, type = 'normal' } = job.attrs.data;
+  const { 
+    screenshotId, 
+    url, 
+    projectId, 
+    userId, 
+    type = 'normal',
+    cookiePrevention,
+    deviceScaleFactor,
+    customCSS,
+    customJS,
+    basicAuth,
+    customCookies
+  } = job.attrs.data;
+  
+  // Extract trigger selectors for interactive screenshots
+  const { triggerSelectors } = job.attrs.data;
   
   logger.info(`Starting screenshot capture job for ${url}`, { screenshotId, projectId, userId });
   
@@ -23,7 +38,14 @@ agenda.define('capture-screenshot', async (job: any) => {
       url,
       projectId,
       userId,
-      type
+      type,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies,
+      triggerSelectors
     });
     
     logger.info(`Screenshot capture completed for ${url}`, { screenshotId });
@@ -34,7 +56,23 @@ agenda.define('capture-screenshot', async (job: any) => {
 });
 
 agenda.define('capture-frame-screenshot', async (job: any) => {
-  const { collectionId, url, projectId, userId, frameDelay, frameIndex, totalFrames, autoScroll, isScrollCapture } = job.attrs.data;
+  const { 
+    collectionId, 
+    url, 
+    projectId, 
+    userId, 
+    frameDelay, 
+    frameIndex, 
+    totalFrames, 
+    autoScroll, 
+    isScrollCapture,
+    cookiePrevention,
+    deviceScaleFactor,
+    customCSS,
+    customJS,
+    basicAuth,
+    customCookies
+  } = job.attrs.data;
   
   logger.info(`Starting frame screenshot capture job for ${url} at ${frameDelay}s`, { 
     collectionId, projectId, userId, frameDelay, frameIndex, totalFrames 
@@ -51,7 +89,13 @@ agenda.define('capture-frame-screenshot', async (job: any) => {
       frameIndex,
       totalFrames,
       autoScroll,
-      isScrollCapture
+      isScrollCapture,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies
     });
     
     logger.info(`Frame screenshot capture completed for ${url} at ${frameDelay}s`, { collectionId, frameIndex });
@@ -62,7 +106,18 @@ agenda.define('capture-frame-screenshot', async (job: any) => {
 });
 
 agenda.define('capture-crawl-screenshots', async (job: any) => {
-  const { collectionId, urls, projectId, userId } = job.attrs.data;
+  const { 
+    collectionId, 
+    urls, 
+    projectId, 
+    userId,
+    cookiePrevention,
+    deviceScaleFactor,
+    customCSS,
+    customJS,
+    basicAuth,
+    customCookies
+  } = job.attrs.data;
   
   logger.info(`Starting crawl screenshot capture job`, { collectionId, urlCount: urls.length });
   
@@ -72,7 +127,13 @@ agenda.define('capture-crawl-screenshots', async (job: any) => {
       collectionId,
       urls,
       projectId,
-      userId
+      userId,
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      basicAuth,
+      customCookies
     });
     
     logger.info(`Crawl screenshot capture completed`, { collectionId });

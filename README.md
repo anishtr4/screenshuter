@@ -12,7 +12,22 @@ Capture, manage, and organize website screenshots with powerful features includi
 
 ## 🎯 Recent Updates & Fixes
 
-### 🔄 State Management Unification (Latest)
+### 🎯 Interactive Trigger Selectors (Latest)
+- **NEW FEATURE**: Click CSS selectors before capturing screenshots for dynamic content
+- **Multi-Screenshot**: Each trigger generates a separate screenshot showing different UI states
+- **Real-time UI**: Multiple loading placeholders show immediate feedback for each trigger
+- **Smart Timing**: Configurable delays before clicking and wait times after clicking
+- **Descriptive**: Optional descriptions for each trigger action
+- **Socket Events**: Real-time updates as each trigger screenshot completes
+- **API Integration**: Full API support with `triggerSelectors` payload field
+
+### 🔐 Enhanced Authentication & Security
+- **HTTP Basic Auth**: Support for websites requiring basic authentication
+- **Custom Cookies**: Inject custom cookies for authenticated sessions
+- **Advanced Options**: Custom CSS/JS injection for page manipulation
+- **Secure Handling**: Proper credential management and validation
+
+### 🔄 State Management Unification
 - **Migrated**: From hybrid Redux+Zustand to unified Redux Toolkit approach
 - **Removed**: Zustand dependency completely for consistency
 - **Added**: New `projectSlice` and `useProject` hook for better state management
@@ -35,11 +50,14 @@ Capture, manage, and organize website screenshots with powerful features includi
 
 ### Core Features
 - **High-Quality Screenshots**: Capture pixel-perfect screenshots using Playwright browser automation
+- **Interactive Trigger Selectors**: Click CSS selectors to capture dynamic UI states and interactions
 - **Website Crawling**: Automatically discover and capture screenshots from multiple pages
+- **Authentication Support**: HTTP Basic Auth and custom cookie injection for protected sites
+- **Advanced Page Control**: Custom CSS/JS injection for page manipulation before capture
 - **Project Management**: Organize screenshots into projects with intuitive management
 - **Role-Based Access Control**: Super Admin and User roles with granular permissions
 - **API Integration**: RESTful API with token-based authentication for programmatic access
-- **Real-time Updates**: Live status updates via WebSocket connections
+- **Real-time Updates**: Live status updates via WebSocket connections with multi-screenshot support
 
 ### User Management
 - **Admin Dashboard**: Comprehensive user management for administrators
@@ -82,6 +100,153 @@ Capture, manage, and organize website screenshots with powerful features includi
 - **File Storage**: Local filesystem with authenticated serving
 - **Environment**: Environment-based configuration
 - **Development**: Hot reload and TypeScript compilation
+
+## 🎯 Interactive Trigger Selectors
+
+### Overview
+Interactive Trigger Selectors allow you to capture screenshots of dynamic UI states by automatically clicking elements before taking screenshots. This is perfect for:
+- Dropdown menus and navigation
+- Modal dialogs and popups
+- Tab switching and accordion content
+- Hover states and interactive elements
+- Multi-step forms and wizards
+
+### How It Works
+1. **Define Triggers**: Specify CSS selectors for elements to click
+2. **Configure Timing**: Set delays before clicking and wait times after
+3. **Add Descriptions**: Optional descriptions for each trigger action
+4. **Submit Request**: Multiple loading placeholders appear immediately
+5. **Real-time Updates**: Each trigger screenshot appears as it completes
+
+### Frontend Usage
+
+#### Basic Example
+```typescript
+const triggerSelectors = [
+  {
+    selector: '.dropdown-toggle',
+    delay: 1000,           // Wait 1s before clicking
+    waitAfter: 2000,       // Wait 2s after clicking
+    description: 'Open dropdown menu'
+  },
+  {
+    selector: '.modal-trigger',
+    delay: 500,
+    waitAfter: 3000,
+    description: 'Open modal dialog'
+  }
+];
+
+// Submit with trigger selectors
+const options = {
+  ...otherOptions,
+  triggerSelectors
+};
+
+await apiClient.createScreenshot(url, projectId, [], options);
+```
+
+#### UI Integration
+The frontend automatically:
+- Creates loading placeholders for main screenshot + each trigger
+- Shows descriptive titles for each trigger action
+- Updates placeholders with actual screenshots via WebSocket events
+- Handles errors gracefully without blocking other screenshots
+
+### API Integration
+
+#### Request Payload
+```json
+{
+  "url": "https://example.com",
+  "projectId": "507f1f77bcf86cd799439011",
+  "triggerSelectors": [
+    {
+      "selector": ".navbar-toggle",
+      "delay": 1000,
+      "waitAfter": 2000,
+      "description": "Open mobile menu"
+    },
+    {
+      "selector": ".search-button",
+      "delay": 500,
+      "waitAfter": 1500,
+      "description": "Open search modal"
+    }
+  ],
+  "options": {
+    "fullPage": true,
+    "width": 1920,
+    "height": 1080
+  }
+}
+```
+
+#### Response
+```json
+{
+  "success": true,
+  "message": "Screenshot request submitted",
+  "screenshotId": "507f1f77bcf86cd799439012",
+  "expectedScreenshots": 3
+}
+```
+
+### Backend Processing
+
+#### Execution Flow
+1. **Main Screenshot**: Capture initial page state
+2. **Trigger Execution**: For each trigger:
+   - Wait for specified delay
+   - Click the CSS selector
+   - Wait for specified duration
+   - Capture screenshot
+   - Save to database
+   - Emit WebSocket event
+3. **Completion**: All screenshots available in project
+
+#### Error Handling
+- Individual trigger failures don't block other triggers
+- Detailed error logging for debugging
+- Graceful fallback to main screenshot if all triggers fail
+- Element not found warnings with continuation
+
+### Best Practices
+
+#### CSS Selectors
+- Use specific, stable selectors
+- Avoid dynamic classes or IDs
+- Test selectors in browser DevTools
+- Consider using data attributes for reliability
+
+#### Timing Configuration
+- **Delay**: Time to wait before clicking (page load, animations)
+- **Wait After**: Time to wait after clicking (content load, transitions)
+- Start with conservative timings and adjust as needed
+
+#### Performance Considerations
+- Limit to 5-10 triggers per request for optimal performance
+- Use appropriate wait times to avoid race conditions
+- Consider page complexity when setting timeouts
+
+### Troubleshooting
+
+#### Common Issues
+1. **Element Not Found**: Check CSS selector specificity
+2. **Timing Issues**: Increase delay or waitAfter values
+3. **No Screenshots**: Check backend logs for validation errors
+4. **Partial Results**: Some triggers may fail while others succeed
+
+#### Debug Logging
+Backend logs show detailed execution:
+```
+🎯 Executing 2 trigger selectors for screenshot abc123
+🎯 Trigger 1/2: Open dropdown menu
+🕰️ Waiting 1000ms before clicking .dropdown-toggle
+🖱️ Clicking element: .dropdown-toggle
+✅ Trigger screenshot 1 captured: 507f1f77bcf86cd799439013
+🔔 Emitting screenshotCompleted event for: 507f1f77bcf86cd799439013
+```
 
 ## 📋 Prerequisites
 

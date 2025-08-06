@@ -173,6 +173,24 @@ GET /screenshots/:projectId
 POST /screenshots
 ```
 
+#### Basic Screenshot
+**Request Body:**
+```json
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://example.com",
+  "options": {
+    "fullPage": true,
+    "width": 1920,
+    "height": 1080,
+    "waitTime": 2000,
+    "customCSS": "body { background: white; }",
+    "customJS": "console.log('Page loaded');"
+  }
+}
+```
+
+#### Frame Screenshots
 **Request Body:**
 ```json
 {
@@ -180,9 +198,126 @@ POST /screenshots
   "url": "https://example.com",
   "timeFrames": [0, 5, 10],
   "autoScroll": true,
-  "collectionName": "Homepage Tests"
+  "collectionName": "Homepage Tests",
+  "options": {
+    "fullPage": true,
+    "width": 1920,
+    "height": 1080
+  }
 }
 ```
+
+#### Interactive Trigger Selectors (NEW)
+**Request Body:**
+```json
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://example.com",
+  "triggerSelectors": [
+    {
+      "selector": ".dropdown-toggle",
+      "delay": 1000,
+      "waitAfter": 2000,
+      "description": "Open dropdown menu"
+    },
+    {
+      "selector": ".modal-trigger",
+      "delay": 500,
+      "waitAfter": 3000,
+      "description": "Open modal dialog"
+    }
+  ],
+  "options": {
+    "fullPage": true,
+    "width": 1920,
+    "height": 1080,
+    "waitTime": 2000
+  }
+}
+```
+
+#### Authentication & Advanced Options
+**Request Body:**
+```json
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://protected-site.com",
+  "basicAuth": {
+    "username": "admin",
+    "password": "secret123"
+  },
+  "customCookies": [
+    {
+      "name": "session_id",
+      "value": "abc123xyz",
+      "domain": "protected-site.com",
+      "path": "/",
+      "httpOnly": true,
+      "secure": true
+    }
+  ],
+  "triggerSelectors": [
+    {
+      "selector": ".login-required-button",
+      "delay": 2000,
+      "waitAfter": 3000,
+      "description": "Click authenticated action"
+    }
+  ],
+  "options": {
+    "fullPage": true,
+    "width": 1920,
+    "height": 1080,
+    "waitTime": 3000,
+    "cookiePrevention": false,
+    "deviceScaleFactor": 2,
+    "customCSS": ".ads { display: none; }",
+    "customJS": "document.querySelector('.popup').remove();"
+  }
+}
+```
+
+#### Request Parameters
+
+**Root Level:**
+- `projectId` (string, required): Project ID to associate screenshot with
+- `url` (string, required): URL to capture
+- `timeFrames` (array, optional): Time delays for frame screenshots
+- `autoScroll` (boolean, optional): Enable auto-scroll for frame screenshots
+- `collectionName` (string, optional): Name for frame screenshot collection
+- `triggerSelectors` (array, optional): Interactive trigger configurations
+- `basicAuth` (object, optional): HTTP Basic Authentication credentials
+- `customCookies` (array, optional): Custom cookies to inject
+
+**Trigger Selector Object:**
+- `selector` (string, required): CSS selector to click
+- `delay` (number, required): Milliseconds to wait before clicking
+- `waitAfter` (number, required): Milliseconds to wait after clicking
+- `description` (string, optional): Description of the trigger action
+
+**Basic Auth Object:**
+- `username` (string, required): Username for HTTP Basic Auth
+- `password` (string, required): Password for HTTP Basic Auth
+
+**Custom Cookie Object:**
+- `name` (string, required): Cookie name
+- `value` (string, required): Cookie value
+- `domain` (string, optional): Cookie domain
+- `path` (string, optional): Cookie path (default: "/")
+- `expires` (number, optional): Expiration timestamp
+- `httpOnly` (boolean, optional): HTTP-only flag
+- `secure` (boolean, optional): Secure flag
+- `sameSite` (string, optional): SameSite policy ("Strict", "Lax", "None")
+
+**Options Object:**
+- `fullPage` (boolean, optional): Capture full page (default: true)
+- `width` (number, optional): Viewport width (default: 1920)
+- `height` (number, optional): Viewport height (default: 1080)
+- `waitTime` (number, optional): Time to wait before capture (ms)
+- `cookiePrevention` (boolean, optional): Enable cookie prevention
+- `deviceScaleFactor` (number, optional): Device pixel ratio (default: 2)
+- `customCSS` (string, optional): CSS to inject into page
+- `customJS` (string, optional): JavaScript to execute on page
 
 **Response:**
 ```json
@@ -192,7 +327,30 @@ POST /screenshots
     "id": "64a1b2c3d4e5f6789012346",
     "url": "https://example.com",
     "status": "processing",
-    "collectionId": "64a1b2c3d4e5f6789012347"
+    "collectionId": "64a1b2c3d4e5f6789012347",
+    "expectedScreenshots": 3
+  }
+}
+```
+
+**WebSocket Events:**
+For real-time updates, listen to these WebSocket events:
+- `screenshotCompleted`: Individual screenshot completion
+- `collectionCompleted`: Collection completion
+- `screenshot-progress`: Progress updates during capture
+
+**Event Payload Example:**
+```json
+{
+  "screenshotId": "64a1b2c3d4e5f6789012346",
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "status": "completed",
+  "imagePath": "/uploads/screenshots/64a1b2c3d4e5f6789012346.png",
+  "metadata": {
+    "title": "Trigger 1: Open dropdown menu",
+    "triggerSelector": ".dropdown-toggle",
+    "triggerDescription": "Open dropdown menu",
+    "triggerIndex": 0
   }
 }
 ```

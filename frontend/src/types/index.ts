@@ -62,6 +62,15 @@ export interface Screenshot {
       width: number
       height: number
     }
+    // Trigger selector related fields
+    triggerIndex?: number
+    triggerSelector?: string
+    triggerDescription?: string
+    title?: string
+    description?: string
+    timestamp?: string
+    isCollection?: boolean
+    totalFrames?: number
   }
   createdAt: string
   updatedAt?: string

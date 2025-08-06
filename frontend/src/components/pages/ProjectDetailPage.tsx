@@ -36,6 +36,14 @@ interface Screenshot {
     timestamp?: string
     isCollection?: boolean // Added to support collection flag
     totalFrames?: number // Added to support frame collections
+    // Trigger selector related fields
+    triggerIndex?: number
+    triggerSelector?: string
+    triggerDescription?: string
+    width?: number
+    height?: number
+    fileSize?: number
+    capturedAt?: string
   }
   isFromCollection?: boolean
   collectionId?: string
@@ -206,21 +214,67 @@ const ProjectDetailPage: React.FC = () => {
               height: progress.metadata?.height,
               fileSize: progress.metadata?.fileSize,
               capturedAt: progress.metadata?.capturedAt || new Date().toISOString(),
-              timestamp: progress.createdAt || new Date().toISOString() // Use actual creation date
+              timestamp: progress.createdAt || new Date().toISOString(), // Use actual creation date
+              // Include trigger-related fields if available
+              triggerSelector: progress.metadata?.triggerSelector,
+              triggerDescription: progress.metadata?.triggerDescription,
+              triggerIndex: progress.metadata?.triggerIndex
             },
             createdAt: progress.createdAt || new Date().toISOString(), // Use actual creation date
             updatedAt: new Date().toISOString()
           }
           
-          // Remove any optimistic/temp entries and add the completed screenshot
+          // Replace the appropriate loading placeholder with the completed screenshot
           setScreenshots(prev => {
-            const withoutTemp = prev.filter(s => {
-              const id = (s.id || s._id)?.toString()
-              return !id?.startsWith('temp-')
-            })
+            // Determine if this is a trigger screenshot based on the title pattern
+            const isTriggerScreenshot = completedScreenshot.title?.includes('Trigger') || 
+                                      completedScreenshot.metadata?.title?.includes('Trigger')
             
-            // Add the completed screenshot at the beginning (most recent first)
-            return [completedScreenshot, ...withoutTemp]
+            if (isTriggerScreenshot) {
+              // For trigger screenshots, replace the matching temp trigger placeholder
+              const updatedScreenshots = prev.map(screenshot => {
+                const screenshotId = (screenshot.id || screenshot._id)?.toString()
+                
+                // Check if this is a temp trigger placeholder that matches
+                if (screenshotId?.startsWith('temp-trigger-') && 
+                    screenshot.status === 'pending' &&
+                    (screenshot.title?.includes(completedScreenshot.title?.split(':')[1]?.trim() || '') ||
+                     screenshot.metadata?.triggerSelector === completedScreenshot.metadata?.triggerSelector)) {
+                  console.log(`🎯 Replacing trigger placeholder ${screenshotId} with completed screenshot ${completedScreenshot._id}`)
+                  return completedScreenshot
+                }
+                return screenshot
+              })
+              
+              // If no placeholder was found, add it at the beginning
+              const wasReplaced = updatedScreenshots.some(s => s._id === completedScreenshot._id)
+              if (!wasReplaced) {
+                console.log(`🎯 No matching trigger placeholder found, adding trigger screenshot at beginning`)
+                return [completedScreenshot, ...prev]
+              }
+              
+              return updatedScreenshots
+            } else {
+              // For main screenshots, replace the temp-main placeholder
+              const updatedScreenshots = prev.map(screenshot => {
+                const screenshotId = (screenshot.id || screenshot._id)?.toString()
+                
+                if (screenshotId?.startsWith('temp-main-') && screenshot.status === 'pending') {
+                  console.log(`📷 Replacing main placeholder ${screenshotId} with completed screenshot ${completedScreenshot._id}`)
+                  return completedScreenshot
+                }
+                return screenshot
+              })
+              
+              // If no placeholder was found, add it at the beginning
+              const wasReplaced = updatedScreenshots.some(s => s._id === completedScreenshot._id)
+              if (!wasReplaced) {
+                console.log(`📷 No matching main placeholder found, adding main screenshot at beginning`)
+                return [completedScreenshot, ...prev]
+              }
+              
+              return updatedScreenshots
+            }
           })
           
           // Load thumbnail for the new screenshot if available
@@ -343,6 +397,11 @@ const ProjectDetailPage: React.FC = () => {
 
   // Handle add screenshot
   const handleAddScreenshot = async (data: any) => {
+    console.log('🔍 handleAddScreenshot received data:', data)
+    console.log('🔐 Authentication fields:', { basicAuth: data.basicAuth, customCookies: data.customCookies })
+    console.log('🎯 Trigger selectors:', data.triggerSelectors)
+    console.log('🎨 CSS/JS fields:', { customCSS: data.options?.customCSS, customJS: data.options?.customJS })
+    console.log('📊 Full options object:', data.options)
     setIsSubmitting(true)
     try {
       // Handle different types of screenshot creation
@@ -378,7 +437,14 @@ const ProjectDetailPage: React.FC = () => {
         
         if (isFrameScreenshot) {
           // Frame screenshots create collections - handle like crawl collections
-          const response = await apiClient.createScreenshot(data.url, id!, data.timeFrames, data.options)
+          // Include authentication fields in options
+          const frameOptions = {
+            ...data.options,
+            basicAuth: data.basicAuth,
+            customCookies: data.customCookies,
+            triggerSelectors: data.triggerSelectors
+          }
+          const response = await apiClient.createScreenshot(data.url, id!, data.timeFrames, frameOptions)
           toast.success('Frame screenshot request submitted!')
           setShowAddModal(false)
           
@@ -404,13 +470,24 @@ const ProjectDetailPage: React.FC = () => {
           console.log('Frame collection created, waiting for socket updates...', response.collection?.id)
         } else {
           // Regular single screenshot creation
-          await apiClient.createScreenshot(data.url, id!, data.timeFrames, data.options)
+          // Include authentication fields and trigger selectors in options
+          const screenshotOptions = {
+            ...data.options,
+            basicAuth: data.basicAuth,
+            customCookies: data.customCookies,
+            triggerSelectors: data.triggerSelectors
+          }
+          await apiClient.createScreenshot(data.url, id!, data.timeFrames, screenshotOptions)
           toast.success('Screenshot request submitted!')
           setShowAddModal(false)
           
-          // Add optimistic update for immediate UI feedback
-          const newScreenshot: Screenshot = {
-            _id: `temp-${Date.now()}`,
+          // Add optimistic updates for immediate UI feedback
+          const optimisticScreenshots: Screenshot[] = []
+          const baseTimestamp = Date.now()
+          
+          // Create loading placeholder for main screenshot
+          const mainScreenshot: Screenshot = {
+            _id: `temp-main-${baseTimestamp}`,
             url: data.url,
             status: 'pending',
             title: data.title || data.url,
@@ -419,9 +496,31 @@ const ProjectDetailPage: React.FC = () => {
               timestamp: new Date().toISOString()
             }
           }
+          optimisticScreenshots.push(mainScreenshot)
           
-          setScreenshots(prev => [newScreenshot, ...prev])
-          console.log('Screenshot created, waiting for socket updates...')
+          // Create loading placeholders for each trigger selector
+          if (data.triggerSelectors && data.triggerSelectors.length > 0) {
+            data.triggerSelectors.forEach((trigger: any, index: number) => {
+              const triggerScreenshot: Screenshot = {
+                _id: `temp-trigger-${baseTimestamp}-${index}`,
+                url: data.url,
+                status: 'pending',
+                title: trigger.description || `Trigger ${index + 1}: ${trigger.selector}`,
+                metadata: {
+                  title: trigger.description || `Trigger ${index + 1}: ${trigger.selector}`,
+                  timestamp: new Date().toISOString(),
+                  triggerIndex: index,
+                  triggerSelector: trigger.selector,
+                  triggerDescription: trigger.description
+                }
+              }
+              optimisticScreenshots.push(triggerScreenshot)
+            })
+            console.log(`🎯 Created ${data.triggerSelectors.length} trigger loading placeholders`)
+          }
+          
+          setScreenshots(prev => [...optimisticScreenshots, ...prev])
+          console.log(`Screenshot created with ${optimisticScreenshots.length} loading placeholders, waiting for socket updates...`)
         }
       }
     } catch (error) {
@@ -936,42 +1035,73 @@ const ProjectDetailPage: React.FC = () => {
               .map((progress) => (
                 <div
                   key={progress.screenshotId}
-                  className="group relative overflow-hidden rounded-2xl bg-blue-50 dark:bg-blue-900/20 backdrop-blur-2xl shadow-xl border border-blue-200 dark:border-blue-800 hover:shadow-2xl transition-all duration-300"
+                  className="group relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-50/90 via-indigo-50/80 to-cyan-50/70 dark:from-blue-900/30 dark:via-indigo-900/25 dark:to-cyan-900/20 backdrop-blur-2xl shadow-xl border border-blue-200/60 dark:border-blue-700/40 hover:shadow-2xl transition-all duration-300 hover:scale-[1.01]"
                 >
-                  {/* Background Pattern */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100/20 to-transparent"></div>
+                  {/* Enhanced Background Pattern */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-blue-100/30 via-indigo-100/20 to-transparent dark:from-blue-800/20 dark:via-indigo-800/15"></div>
+                  <div className="absolute -top-2 -right-2 w-16 h-16 bg-gradient-to-br from-blue-200/30 to-transparent dark:from-blue-700/30 rounded-full blur-xl group-hover:from-blue-300/40 dark:group-hover:from-blue-600/40 transition-all duration-300"></div>
                   
                   {/* Progress Badge */}
                   <div className="absolute top-4 right-4 z-10">
-                    <div className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 px-2 py-1 rounded-full text-xs font-medium">
-                      <div className="flex items-center space-x-1">
-                        <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent"></div>
-                        <span>{progress.progress}% - {progress.stage}</span>
+                    <div className="bg-blue-100/90 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 px-3 py-1.5 rounded-full text-xs font-medium backdrop-blur-sm border border-blue-200/50 dark:border-blue-700/50">
+                      <div className="flex items-center space-x-2">
+                        <div className="relative">
+                          <div className="animate-spin rounded-full h-3 w-3 border-2 border-blue-300 dark:border-blue-500 border-t-blue-600 dark:border-t-blue-300"></div>
+                          <div className="absolute inset-0 rounded-full bg-blue-400/20 animate-ping"></div>
+                        </div>
+                        <span className="truncate max-w-[120px]">{progress.progress}%</span>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Processing Preview */}
-                  <div className="relative h-48 bg-blue-100 dark:bg-blue-800 rounded-t-2xl overflow-hidden flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="animate-spin rounded-full h-16 w-16 border-4 border-blue-300 border-t-blue-600 mx-auto mb-4"></div>
-                      <p className="text-blue-700 dark:text-blue-300 font-medium">Processing Screenshot...</p>
-                      <p className="text-blue-600 dark:text-blue-400 text-sm mt-1">{progress.stage}</p>
+                  {/* Stunning Processing Preview */}
+                  <div className="relative h-52 bg-gradient-to-br from-blue-100/80 via-indigo-100/60 to-cyan-100/40 dark:from-blue-800/60 dark:via-indigo-800/50 dark:to-cyan-800/40 rounded-t-3xl overflow-hidden flex items-center justify-center">
+                    {/* Animated background pattern */}
+                    <div className="absolute inset-0 opacity-30">
+                      <div className="absolute top-4 left-4 w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                      <div className="absolute top-8 right-8 w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay: '0.5s'}}></div>
+                      <div className="absolute bottom-6 left-8 w-1 h-1 bg-cyan-400 rounded-full animate-bounce" style={{animationDelay: '1s'}}></div>
+                      <div className="absolute bottom-4 right-6 w-2.5 h-2.5 bg-blue-300 rounded-full animate-bounce" style={{animationDelay: '1.5s'}}></div>
+                    </div>
+                    
+                    <div className="text-center relative z-10">
+                      <div className="relative mb-4">
+                        <div className="animate-spin rounded-full h-20 w-20 border-4 border-blue-300/50 dark:border-blue-500/50 border-t-blue-600 dark:border-t-blue-300 mx-auto shadow-lg"></div>
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400/20 to-indigo-400/20 animate-ping"></div>
+                      </div>
+                      <p className="text-blue-800 dark:text-blue-200 font-bold text-lg">
+                        {progress.stage?.includes('trigger') || progress.stage?.includes('Trigger') ? '🎯 Processing Triggers' :
+                         progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? '🔍 Crawling Page' :
+                         '📸 Processing Screenshot'}
+                      </p>
+                      <p className="text-blue-600 dark:text-blue-300 text-sm mt-2 font-medium truncate px-4">{progress.stage || 'Processing...'}</p>
+                      {progress.url && (
+                        <p className="text-blue-500 dark:text-blue-400 text-xs mt-2 truncate px-4 py-1 bg-white/50 dark:bg-slate-800/50 rounded-lg backdrop-blur-sm max-w-[200px] mx-auto">
+                          {progress.url}
+                        </p>
+                      )}
                     </div>
                   </div>
                   
                   {/* Processing Info */}
                   <div className="p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <div>
+                      <div className="flex-1 min-w-0 pr-3">
                         <h3 className="font-semibold text-gray-900 dark:text-white truncate">
-                          Processing Screenshot...
+                          {progress.stage?.includes('trigger') || progress.stage?.includes('Trigger') ? 'Trigger Screenshot' :
+                           progress.stage?.includes('crawl') || progress.stage?.includes('Crawl') ? 'Crawl Screenshot' :
+                           'Processing Screenshot'}
                         </h3>
                         <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          ID: {progress.screenshotId}
+                          {progress.stage || `${progress.completedScreenshots || 0} of ${progress.totalScreenshots || 1} screenshots`}
                         </p>
+                        {progress.screenshotId && (
+                          <p className="text-xs text-gray-500 dark:text-gray-500 truncate mt-1">
+                            ID: {progress.screenshotId.slice(-8)}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full">
+                      <div className="flex items-center space-x-1 px-2 py-1 bg-blue-100 dark:bg-blue-900/30 rounded-full flex-shrink-0">
                         <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
                         <span className="text-xs font-medium text-blue-700 dark:text-blue-400">
                           {progress.progress}%

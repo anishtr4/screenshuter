@@ -14,7 +14,26 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     throw createError('User not authenticated', 401);
   }
 
-  const { url, projectId, type = 'normal', timeFrames, autoScroll } = req.body;
+  const { 
+    url, 
+    projectId, 
+    type = 'normal', 
+    timeFrames, 
+    autoScroll,
+    // New screenshot options
+    cookiePrevention = true,
+    deviceScaleFactor = 2,
+    customCSS = '',
+    customJS = '',
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
+  } = req.body;
+  
+  // Extract trigger selectors for interactive screenshots
+  const { triggerSelectors } = req.body;
+  
   const userId = req.user.id;
   
   // Debug logging for autoScroll
@@ -94,7 +113,16 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
         frameIndex: i + 1,
         totalFrames: validTimeFrames.length,
         autoScroll: autoScroll || null,
-        isScrollCapture: false
+        isScrollCapture: false,
+        // Screenshot options
+        cookiePrevention,
+        deviceScaleFactor,
+        customCSS,
+        customJS,
+        // Authentication options
+        basicAuth,
+        // Cookie injection
+        customCookies
       };
       
       logger.info(`💼 Scheduling frame job`, {
@@ -168,7 +196,18 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       url,
       projectId,
       userId,
-      type
+      type,
+      // Screenshot options
+      cookiePrevention,
+      deviceScaleFactor,
+      customCSS,
+      customJS,
+      // Authentication options
+      basicAuth,
+      // Cookie injection
+      customCookies,
+      // Trigger selectors for interactive screenshots
+      triggerSelectors
     });
 
     logger.info(`Screenshot job scheduled for ${url}`, { 
@@ -198,7 +237,19 @@ export const createCrawlScreenshot = asyncHandler(async (req: Request, res: Resp
     throw createError('User not authenticated', 401);
   }
 
-  const { baseUrl, projectId } = req.body;
+  const { 
+    baseUrl, 
+    projectId,
+    // Screenshot options
+    cookiePrevention = true,
+    deviceScaleFactor = 2,
+    customCSS = '',
+    customJS = '',
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
+  } = req.body;
   const userId = req.user.id;
 
   // Validate project ID format
@@ -265,7 +316,19 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
     throw createError('User not authenticated', 401);
   }
 
-  const { collectionId, selectedUrls } = req.body;
+  const { 
+    collectionId, 
+    selectedUrls,
+    // Screenshot options
+    cookiePrevention = true,
+    deviceScaleFactor = 2,
+    customCSS = '',
+    customJS = '',
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
+  } = req.body;
   const userId = req.user.id;
 
   // Verify collection exists and user owns the project
@@ -315,7 +378,16 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
     collectionId: collection._id.toString(),
     urls: selectedUrls,
     projectId: project._id.toString(),
-    userId
+    userId,
+    // Screenshot options
+    cookiePrevention,
+    deviceScaleFactor,
+    customCSS,
+    customJS,
+    // Authentication options
+    basicAuth,
+    // Cookie injection
+    customCookies
   });
 
   logger.info(`Crawl screenshot job scheduled`, { 
