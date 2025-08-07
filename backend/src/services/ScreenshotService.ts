@@ -1,4 +1,6 @@
 import { chromium, Browser, Page } from 'playwright';
+import { addExtra } from 'playwright-extra';
+import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import path from 'path';
 import fs from 'fs/promises';
 import sharp from 'sharp';
@@ -6,6 +8,10 @@ import { Screenshot, IScreenshot } from '../models/Screenshot';
 import { Collection } from '../models/Collection';
 import { logger } from '../config/logger';
 import { io } from '../index';
+
+// Add stealth plugin to playwright
+const chromiumStealth = addExtra(chromium);
+chromiumStealth.use(StealthPlugin());
 
 export interface ScreenshotJobData {
   screenshotId: string;
@@ -146,9 +152,16 @@ export class ScreenshotService {
 
   private async getBrowser(): Promise<Browser> {
     if (!this.browser) {
-      this.browser = await chromium.launch({
+      const stealthEnabled = process.env.STEALTH_MODE_ENABLED === 'true';
+      
+      // Use stealth-enabled chromium for better bot detection evasion
+      const browserEngine = stealthEnabled ? chromiumStealth : chromium;
+      logger.info(`🤖 Launching browser with stealth mode: ${stealthEnabled ? 'ENABLED' : 'DISABLED'}`);
+      
+      this.browser = await browserEngine.launch({
         headless: true,
         args: [
+          // Basic security and performance
           '--no-sandbox',
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
@@ -164,9 +177,38 @@ export class ScreenshotService {
           '--disable-field-trial-config',
           '--disable-ipc-flooding-protection',
           '--memory-pressure-off',
-          '--max_old_space_size=4096'
+          '--max_old_space_size=4096',
+          
+          // Anti-bot detection measures
+          '--disable-blink-features=AutomationControlled',
+          '--disable-features=VizDisplayCompositor,VizHitTestSurfaceLayer',
+          '--disable-default-apps',
+          '--disable-extensions',
+          '--disable-component-extensions-with-background-pages',
+          '--disable-background-networking',
+          '--disable-sync',
+          '--metrics-recording-only',
+          '--disable-default-apps',
+          '--mute-audio',
+          '--no-default-browser-check',
+          '--no-first-run',
+          '--disable-backgrounding-occluded-windows',
+          '--disable-renderer-backgrounding',
+          '--disable-features=TranslateUI',
+          '--disable-ipc-flooding-protection',
+          '--enable-features=NetworkService,NetworkServiceLogging',
+          '--force-color-profile=srgb',
+          '--disable-features=VizDisplayCompositor',
+          
+          // Realistic browser behavior
+          '--user-agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"',
+          '--accept-lang=en-US,en;q=0.9',
+          '--window-size=1920,1080',
+          '--start-maximized'
         ]
       });
+      
+      logger.info('🤖 Browser launched with stealth mode enabled');
     }
     return this.browser;
   }
@@ -225,9 +267,127 @@ export class ScreenshotService {
       logger.info(`Device scale factor ${deviceScaleFactor} requested (applied at context level)`);
     }
     
+    // Set realistic headers to avoid bot detection
     await page.setExtraHTTPHeaders({
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'en-US,en;q=0.9',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'DNT': '1',
+      'Connection': 'keep-alive',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
+      'Cache-Control': 'max-age=0'
     });
+
+    // Advanced anti-bot detection measures
+    await page.addInitScript(`
+      // Remove webdriver property
+      Object.defineProperty(navigator, 'webdriver', {
+        get: () => undefined,
+      });
+
+      // Mock plugins
+      Object.defineProperty(navigator, 'plugins', {
+        get: () => [
+          {
+            0: {
+              type: 'application/x-google-chrome-pdf',
+              suffixes: 'pdf',
+              description: 'Portable Document Format',
+              enabledPlugin: null
+            },
+            description: 'Portable Document Format',
+            filename: 'internal-pdf-viewer',
+            length: 1,
+            name: 'Chrome PDF Plugin'
+          },
+          {
+            0: {
+              type: 'application/pdf',
+              suffixes: 'pdf',
+              description: '',
+              enabledPlugin: null
+            },
+            description: '',
+            filename: 'mhjfbmdgcfjbbpaeojofohoefgiehjai',
+            length: 1,
+            name: 'Chrome PDF Viewer'
+          }
+        ],
+      });
+
+      // Mock languages
+      Object.defineProperty(navigator, 'languages', {
+        get: () => ['en-US', 'en'],
+      });
+
+      // Mock permissions
+      const originalQuery = window.navigator.permissions.query;
+      window.navigator.permissions.query = (parameters) => (
+        parameters.name === 'notifications' ?
+          Promise.resolve({ state: Notification.permission }) :
+          originalQuery(parameters)
+      );
+
+      // Mock chrome runtime
+      if (!window.chrome) {
+        window.chrome = {};
+      }
+      if (!window.chrome.runtime) {
+        window.chrome.runtime = {
+          onConnect: undefined,
+          onMessage: undefined,
+        };
+      }
+
+      // Mock screen properties
+      Object.defineProperty(screen, 'availTop', { get: () => 0 });
+      Object.defineProperty(screen, 'availLeft', { get: () => 0 });
+      Object.defineProperty(screen, 'availWidth', { get: () => 1920 });
+      Object.defineProperty(screen, 'availHeight', { get: () => 1080 });
+      Object.defineProperty(screen, 'colorDepth', { get: () => 24 });
+      Object.defineProperty(screen, 'pixelDepth', { get: () => 24 });
+
+      // Mock connection
+      Object.defineProperty(navigator, 'connection', {
+        get: () => ({
+          effectiveType: '4g',
+          rtt: 100,
+          downlink: 2.0,
+          saveData: false
+        }),
+      });
+
+      // Override toString methods to hide automation
+      const originalToString = Function.prototype.toString;
+      Function.prototype.toString = function() {
+        if (this === navigator.webdriver) {
+          return 'function webdriver() { [native code] }';
+        }
+        return originalToString.call(this);
+      };
+
+      // Add realistic timing
+      const originalPerformanceNow = performance.now;
+      let performanceOffset = Math.random() * 1000;
+      performance.now = function() {
+        return originalPerformanceNow.call(this) + performanceOffset;
+      };
+
+      // Mock battery API
+      if (!navigator.getBattery) {
+        navigator.getBattery = () => Promise.resolve({
+          charging: true,
+          chargingTime: 0,
+          dischargingTime: Infinity,
+          level: Math.random() * 0.5 + 0.5
+        });
+      }
+    `);
 
     // Set up HTTP Basic Authentication if provided
     if (basicAuth) {
@@ -452,6 +612,109 @@ export class ScreenshotService {
   }
 
   /**
+   * Navigate to URL with human-like behavior and anti-bot measures
+   */
+  private async humanLikeNavigation(page: Page, url: string, timeout: number = 60000): Promise<void> {
+    const humanBehaviorEnabled = process.env.HUMAN_BEHAVIOR_ENABLED === 'true';
+    const minDelay = parseInt(process.env.MIN_INTERACTION_DELAY || '200');
+    const maxDelay = parseInt(process.env.MAX_INTERACTION_DELAY || '2000');
+    
+    try {
+      if (humanBehaviorEnabled) {
+        // Add random delay before navigation (simulate user thinking time)
+        const delay = Math.random() * (maxDelay - minDelay) + minDelay;
+        await page.waitForTimeout(delay);
+      }
+      
+      // Set additional anti-bot headers just before navigation
+      await page.setExtraHTTPHeaders({
+        'Sec-Ch-Ua': '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"macOS"',
+        'Sec-Ch-Ua-Platform-Version': '"13.0.0"',
+        'Sec-Ch-Ua-Full-Version-List': '"Not_A Brand";v="8.0.0.0", "Chromium";v="120.0.6099.109", "Google Chrome";v="120.0.6099.109"'
+      });
+      
+      // Navigate with realistic options
+      await page.goto(url, {
+        waitUntil: 'networkidle',
+        timeout: timeout
+      });
+      
+      if (humanBehaviorEnabled) {
+        // Add human-like behavior after page load
+        const postLoadDelay = Math.random() * (maxDelay - minDelay) + minDelay;
+        await page.waitForTimeout(postLoadDelay);
+        
+        // Simulate some mouse movement to appear more human
+        await page.mouse.move(Math.random() * 100 + 50, Math.random() * 100 + 50);
+        await page.waitForTimeout(Math.random() * 500 + 200);
+      }
+      
+    } catch (error) {
+      // Fallback to domcontentloaded if networkidle fails
+      if (error instanceof Error && error.message.includes('Timeout')) {
+        logger.warn(`Networkidle timeout for ${url}, trying domcontentloaded...`);
+        await page.goto(url, {
+          waitUntil: 'domcontentloaded',
+          timeout: timeout
+        });
+      } else {
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Simulate human-like clicking behavior to avoid bot detection
+   */
+  private async humanLikeClick(page: Page, element: any): Promise<void> {
+    try {
+      // Get element bounding box
+      const box = await element.boundingBox();
+      if (!box) {
+        // Fallback to regular click if no bounding box
+        await element.click();
+        return;
+      }
+
+      // Calculate random click position within element (avoid exact center)
+      const x = box.x + (box.width * (0.3 + Math.random() * 0.4)); // 30-70% of width
+      const y = box.y + (box.height * (0.3 + Math.random() * 0.4)); // 30-70% of height
+
+      // Add small random movement before clicking (simulate mouse approach)
+      const startX = x + (Math.random() - 0.5) * 50;
+      const startY = y + (Math.random() - 0.5) * 50;
+      
+      // Move mouse to starting position
+      await page.mouse.move(startX, startY);
+      await page.waitForTimeout(Math.random() * 100 + 50); // 50-150ms
+      
+      // Move to target position with slight curve
+      const midX = (startX + x) / 2 + (Math.random() - 0.5) * 20;
+      const midY = (startY + y) / 2 + (Math.random() - 0.5) * 20;
+      
+      await page.mouse.move(midX, midY);
+      await page.waitForTimeout(Math.random() * 50 + 25); // 25-75ms
+      
+      await page.mouse.move(x, y);
+      await page.waitForTimeout(Math.random() * 100 + 50); // 50-150ms hover
+      
+      // Click with realistic timing
+      await page.mouse.down();
+      await page.waitForTimeout(Math.random() * 50 + 50); // 50-100ms click duration
+      await page.mouse.up();
+      
+      // Small delay after click
+      await page.waitForTimeout(Math.random() * 200 + 100); // 100-300ms
+      
+    } catch (error) {
+      logger.warn('Human-like click failed, falling back to regular click:', error);
+      await element.click();
+    }
+  }
+
+  /**
    * Execute trigger selectors and capture screenshots for each interaction
    */
   private async executeTriggerSelectors(
@@ -490,9 +753,13 @@ export class ScreenshotService {
           continue;
         }
         
-        // Click the element
+        // Scroll element into view with human-like behavior
+        await element.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(Math.random() * 500 + 200); // Random delay 200-700ms
+        
+        // Human-like mouse movement and click
         logger.info(`🖱️ Clicking element: ${trigger.selector}`);
-        await element.click();
+        await this.humanLikeClick(page, element);
         
         // Wait after clicking
         if (trigger.waitAfter > 0) {
@@ -659,16 +926,12 @@ export class ScreenshotService {
         metadata
       });
 
-      // Navigate to URL with increased timeout for heavy websites
+      // Navigate to URL with human-like behavior and anti-bot measures
       try {
-        await page.goto(url, { 
-          waitUntil: 'networkidle',
-          timeout: parseInt(process.env.SCREENSHOT_TIMEOUT || '60000') // Increased to 60 seconds
-        });
+        await this.humanLikeNavigation(page, url, parseInt(process.env.SCREENSHOT_TIMEOUT || '60000'));
       } catch (error) {
-        // If networkidle fails, try with domcontentloaded as fallback
         if (error instanceof Error && error.message.includes('Timeout')) {
-          logger.warn(`Networkidle timeout for ${url}, trying domcontentloaded...`);
+          logger.warn(`Navigation timeout for ${url}, retrying...`);
           
           io.to(`user-${userId}`).emit('screenshot-progress', {
             screenshotId,
@@ -677,6 +940,7 @@ export class ScreenshotService {
             stage: 'Retrying with faster loading strategy...'
           });
           
+          // Final fallback - direct navigation
           await page.goto(url, { 
             waitUntil: 'domcontentloaded',
             timeout: parseInt(process.env.SCREENSHOT_TIMEOUT || '60000')
