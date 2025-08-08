@@ -20,21 +20,57 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     type = 'normal', 
     timeFrames, 
     autoScroll,
-    // New screenshot options
+    options = {}
+  } = req.body;
+  
+  // Extract screenshot options from options object or fallback to direct body
+  const {
     cookiePrevention = true,
     deviceScaleFactor = 2,
+    width,
+    height,
+    fullPage = true,
+    unsticky = true, // Default to making sticky elements static
     customCSS = '',
     customJS = '',
+    injectBeforeNavigation = false,
+    injectBeforeViewport = false, // Default to injecting JS after viewport is set
     // Authentication options
     basicAuth,
     // Cookie injection
     customCookies
-  } = req.body;
+  } = { ...req.body, ...options }; // options object takes precedence
   
   // Extract trigger selectors for interactive screenshots
   const { triggerSelectors } = req.body;
   
+  // Extract form steps for form automation
+  const { formSteps } = req.body;
+  
+  // Parse customCookies if it's a JSON string
+  let parsedCustomCookies = customCookies;
+  if (typeof customCookies === 'string' && customCookies.trim()) {
+    try {
+      parsedCustomCookies = JSON.parse(customCookies);
+      logger.info(`🍪 Parsed ${parsedCustomCookies.length} custom cookies from JSON string`);
+    } catch (error) {
+      logger.warn('Failed to parse customCookies JSON string:', error);
+      parsedCustomCookies = undefined;
+    }
+  }
+  
   const userId = req.user.id;
+  
+  // Debug logging for screenshot options
+  logger.info(`📝 Screenshot request parameters:`, {
+    fullPage,
+    width,
+    height,
+    cookiePrevention,
+    deviceScaleFactor,
+    injectBeforeNavigation,
+    url
+  });
   
   // Debug logging for autoScroll
   logger.info(`📝 Screenshot request received`, {
@@ -117,8 +153,13 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
         // Screenshot options
         cookiePrevention,
         deviceScaleFactor,
+        width,
+        height,
+        fullPage,
         customCSS,
         customJS,
+        injectBeforeNavigation,
+      injectBeforeViewport,
         // Authentication options
         basicAuth,
         // Cookie injection
@@ -191,7 +232,7 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
     await screenshot.save();
 
     // Schedule screenshot capture job
-    await agenda.now('capture-screenshot', {
+    const jobData = {
       screenshotId: screenshot._id.toString(),
       url,
       projectId,
@@ -200,15 +241,35 @@ export const createScreenshot = asyncHandler(async (req: Request, res: Response)
       // Screenshot options
       cookiePrevention,
       deviceScaleFactor,
+      width,
+      height,
+      fullPage,
+      unsticky,
       customCSS,
       customJS,
+      injectBeforeNavigation,
+      injectBeforeViewport,
       // Authentication options
       basicAuth,
       // Cookie injection
-      customCookies,
+      customCookies: parsedCustomCookies,
       // Trigger selectors for interactive screenshots
-      triggerSelectors
+      triggerSelectors,
+      // Form steps for form automation
+      formSteps
+    };
+    
+    logger.info(`🚀 Scheduling screenshot job with data:`, {
+      fullPage: jobData.fullPage,
+      unsticky: jobData.unsticky,
+      width: jobData.width,
+      height: jobData.height,
+      url: jobData.url,
+      hasCookies: !!jobData.customCookies,
+      cookieCount: jobData.customCookies?.length || 0
     });
+    
+    await agenda.now('capture-screenshot', jobData);
 
     logger.info(`Screenshot job scheduled for ${url}`, { 
       screenshotId: screenshot._id, 
@@ -319,16 +380,42 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
   const { 
     collectionId, 
     selectedUrls,
-    // Screenshot options
+    options = {}
+  } = req.body;
+  
+  // Extract screenshot options from options object or fallback to direct body
+  const {
     cookiePrevention = true,
     deviceScaleFactor = 2,
+    width,
+    height,
+    fullPage = true,
+    unsticky = true, // Default to making sticky elements static
     customCSS = '',
     customJS = '',
+    injectBeforeNavigation = false,
+    injectBeforeViewport = false, // Default to injecting JS after viewport is set
     // Authentication options
     basicAuth,
     // Cookie injection
     customCookies
-  } = req.body;
+  } = { ...req.body, ...options }; // options object takes precedence
+  
+  // Extract form steps for form automation
+  const { formSteps } = req.body;
+  
+  // Parse customCookies if it's a JSON string
+  let parsedCustomCookies = customCookies;
+  if (typeof customCookies === 'string' && customCookies.trim()) {
+    try {
+      parsedCustomCookies = JSON.parse(customCookies);
+      logger.info(`🍪 Parsed ${parsedCustomCookies.length} custom cookies from JSON string`);
+    } catch (error) {
+      logger.warn('Failed to parse customCookies JSON string:', error);
+      parsedCustomCookies = undefined;
+    }
+  }
+  
   const userId = req.user.id;
 
   // Verify collection exists and user owns the project
@@ -382,12 +469,19 @@ export const selectCrawlUrls = asyncHandler(async (req: Request, res: Response) 
     // Screenshot options
     cookiePrevention,
     deviceScaleFactor,
+    width,
+    height,
+    fullPage,
+    unsticky,
     customCSS,
     customJS,
+    injectBeforeNavigation,
     // Authentication options
     basicAuth,
     // Cookie injection
-    customCookies
+    customCookies: parsedCustomCookies,
+    // Form steps for form automation
+    formSteps
   });
 
   logger.info(`Crawl screenshot job scheduled`, { 

@@ -20,8 +20,12 @@ agenda.define('capture-screenshot', async (job: any) => {
     type = 'normal',
     cookiePrevention,
     deviceScaleFactor,
+    width,
+    height,
+    fullPage,
     customCSS,
     customJS,
+    injectBeforeNavigation,
     basicAuth,
     customCookies
   } = job.attrs.data;
@@ -41,8 +45,12 @@ agenda.define('capture-screenshot', async (job: any) => {
       type,
       cookiePrevention,
       deviceScaleFactor,
+      width,
+      height,
+      fullPage,
       customCSS,
       customJS,
+      injectBeforeNavigation,
       basicAuth,
       customCookies,
       triggerSelectors

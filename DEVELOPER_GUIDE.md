@@ -8,6 +8,7 @@
 - [Development Workflow](#development-workflow)
 - [UI/UX Design System](#uiux-design-system)
 - [API Documentation](#api-documentation)
+- [Form Automation API](#form-automation-api)
 - [Database Schema](#database-schema)
 - [Security Implementation](#security-implementation)
 - [Testing Strategy](#testing-strategy)
@@ -81,6 +82,16 @@ Screenshot SaaS is a production-ready Screenshot-as-a-Service platform built wit
 - **HTTP Basic Authentication**: Support for username/password protected websites
 - **Custom Cookie Injection**: Inject session cookies and authentication tokens from JSON
 - **Protected Content Access**: Capture screenshots of authenticated pages and private content
+
+### Form Automation Features
+- **Multi-Step Form Automation**: Automate complex form filling workflows with multiple steps
+- **Dynamic Input Support**: Handle text, select, checkbox, radio, and textarea input types
+- **Form Submission Triggers**: Automatic form submission with configurable wait times
+- **Validation Checks**: Verify form submission success with element existence, text content, CSS class, and attribute checks
+- **Screenshot Capture Points**: Take screenshots after form filling, submission, and validation
+- **Step-by-Step Progress**: Real-time progress updates for each form automation step
+- **Error Resilience**: Continue screenshot capture even if form automation fails
+- **Timeout Configuration**: Configurable timeouts for each form step to handle slow-loading forms
 - **Flexible Authentication**: Works with all screenshot types (single, frame, crawl)
 
 ## Architecture
@@ -463,6 +474,462 @@ interface User {
   updatedAt: Date
 }
 ```
+
+## Form Automation API
+
+### Overview
+
+Form Automation allows you to automate complex multi-step form filling workflows during screenshot capture. This feature is particularly useful for:
+
+- Capturing screenshots of pages behind login forms
+- Automating multi-step checkout processes
+- Filling out complex registration or application forms
+- Testing form workflows with screenshot validation
+- Capturing different states of dynamic forms
+
+### Form Automation Structure
+
+Form automation is configured through the `formSteps` parameter in screenshot requests:
+
+```typescript
+interface FormStep {
+  stepName: string                    // Descriptive name for the step
+  formInputs: FormInput[]            // Array of form inputs to fill
+  submitTrigger?: SubmitTrigger      // Optional form submission trigger
+  validationChecks?: ValidationCheck[] // Optional validation after submission
+  stepTimeout: number                // Timeout in milliseconds (default: 5000)
+  takeScreenshotAfterFill: boolean   // Take screenshot after filling inputs
+  takeScreenshotAfterSubmit: boolean // Take screenshot after form submission
+  takeScreenshotAfterValidation: boolean // Take screenshot after validation
+}
+
+interface FormInput {
+  selector: string    // CSS selector for the input element
+  value: string      // Value to enter/select
+  inputType: 'text' | 'select' | 'checkbox' | 'radio' | 'textarea'
+}
+
+interface SubmitTrigger {
+  selector: string    // CSS selector for submit button/element
+  waitAfter: number  // Wait time after submission (milliseconds)
+}
+
+interface ValidationCheck {
+  selector: string        // CSS selector for validation element
+  expectedText?: string   // Expected text content (for 'text' checkType)
+  checkType: 'exists' | 'text' | 'class' | 'attribute'
+  expectedClass?: string  // Expected CSS class (for 'class' checkType)
+  attribute?: string      // Attribute name (for 'attribute' checkType)
+  expectedValue?: string  // Expected attribute value (for 'attribute' checkType)
+}
+```
+
+### API Examples
+
+#### Basic Login Form Example
+
+```javascript
+POST /api/screenshots
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://example.com/login",
+  "formSteps": [
+    {
+      "stepName": "Login Form",
+      "formInputs": [
+        {
+          "selector": "#username",
+          "value": "testuser@example.com",
+          "inputType": "text"
+        },
+        {
+          "selector": "#password",
+          "value": "secretpassword",
+          "inputType": "text"
+        }
+      ],
+      "submitTrigger": {
+        "selector": "#login-button",
+        "waitAfter": 3000
+      },
+      "validationChecks": [
+        {
+          "selector": ".dashboard-header",
+          "checkType": "exists"
+        }
+      ],
+      "stepTimeout": 10000,
+      "takeScreenshotAfterFill": true,
+      "takeScreenshotAfterSubmit": true,
+      "takeScreenshotAfterValidation": false
+    }
+  ]
+}
+```
+
+#### Multi-Step Registration Form Example
+
+```javascript
+POST /api/screenshots
+{
+  "projectId": "64a1b2c3d4e5f6789012345",
+  "url": "https://example.com/register",
+  "formSteps": [
+    {
+      "stepName": "Personal Information",
+      "formInputs": [
+        {
+          "selector": "input[name='firstName']",
+          "value": "John",
+          "inputType": "text"
+        },
+        {
+          "selector": "input[name='lastName']",
+          "value": "Doe",
+          "inputType": "text"
+        },
+        {
+          "selector": "select[name='country']",
+          "value": "US",
+          "inputType": "select"
+        },
+        {
+          "selector": "input[name='newsletter']",
+          "value": "true",
+          "inputType": "checkbox"
+        }
+      ],
+      "submitTrigger": {
+        "selector": "button[type='submit']",
+        "waitAfter": 2000
+      },
+      "stepTimeout": 8000,
+      "takeScreenshotAfterFill": true,
+      "takeScreenshotAfterSubmit": true,
+      "takeScreenshotAfterValidation": false
+    },
+    {
+      "stepName": "Account Details",
+      "formInputs": [
+        {
+          "selector": "input[name='email']",
+          "value": "john.doe@example.com",
+          "inputType": "text"
+        },
+        {
+          "selector": "input[name='password']",
+          "value": "SecurePass123!",
+          "inputType": "text"
+        },
+        {
+          "selector": "input[name='confirmPassword']",
+          "value": "SecurePass123!",
+          "inputType": "text"
+        }
+      ],
+      "submitTrigger": {
+        "selector": ".submit-registration",
+        "waitAfter": 5000
+      },
+      "validationChecks": [
+        {
+          "selector": ".success-message",
+          "expectedText": "Registration successful",
+          "checkType": "text"
+        },
+        {
+          "selector": ".user-dashboard",
+          "checkType": "exists"
+        }
+      ],
+      "stepTimeout": 15000,
+      "takeScreenshotAfterFill": false,
+      "takeScreenshotAfterSubmit": true,
+      "takeScreenshotAfterValidation": true
+    }
+  ]
+}
+```
+
+### Input Types
+
+#### Text Input (`text`)
+```javascript
+{
+  "selector": "#email",
+  "value": "user@example.com",
+  "inputType": "text"
+}
+```
+
+#### Select Dropdown (`select`)
+```javascript
+{
+  "selector": "select[name='country']",
+  "value": "US",  // Option value, not display text
+  "inputType": "select"
+}
+```
+
+#### Checkbox (`checkbox`)
+```javascript
+{
+  "selector": "input[name='terms']",
+  "value": "true",  // "true" to check, "false" to uncheck
+  "inputType": "checkbox"
+}
+```
+
+#### Radio Button (`radio`)
+```javascript
+{
+  "selector": "input[name='gender'][value='male']",
+  "value": "true",  // "true" to select this radio option
+  "inputType": "radio"
+}
+```
+
+#### Textarea (`textarea`)
+```javascript
+{
+  "selector": "textarea[name='comments']",
+  "value": "This is a multi-line\ncomment with line breaks.",
+  "inputType": "textarea"
+}
+```
+
+### Validation Check Types
+
+#### Element Exists (`exists`)
+Checks if an element exists on the page:
+```javascript
+{
+  "selector": ".success-banner",
+  "checkType": "exists"
+}
+```
+
+#### Text Content (`text`)
+Checks if an element contains specific text:
+```javascript
+{
+  "selector": ".status-message",
+  "expectedText": "Form submitted successfully",
+  "checkType": "text"
+}
+```
+
+#### CSS Class (`class`)
+Checks if an element has a specific CSS class:
+```javascript
+{
+  "selector": ".form-container",
+  "expectedClass": "success-state",
+  "checkType": "class"
+}
+```
+
+#### Attribute Value (`attribute`)
+Checks if an element has a specific attribute value:
+```javascript
+{
+  "selector": "#submit-button",
+  "attribute": "disabled",
+  "expectedValue": "false",
+  "checkType": "attribute"
+}
+```
+
+### Frontend Implementation
+
+#### Form Automation UI
+
+The Form Automation section is implemented as a collapsible section in the `AddScreenshotModal` component:
+
+```tsx
+{/* Form Automation Section */}
+{formData.mode === 'normal' && (
+  <div className="space-y-4">
+    <button
+      type="button"
+      onClick={() => setShowFormAutomation(!showFormAutomation)}
+      className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+    >
+      <FileText className="h-4 w-4" />
+      Form Automation
+      {showFormAutomation ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+    </button>
+    
+    {showFormAutomation && (
+      <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        {/* Form automation controls */}
+      </div>
+    )}
+  </div>
+)}
+```
+
+#### Form Data Structure
+
+```typescript
+interface ScreenshotFormData {
+  // ... other fields
+  formSteps?: Array<{
+    stepName: string
+    formInputs: Array<{
+      selector: string
+      value: string
+      inputType: string
+    }>
+    submitTrigger?: {
+      selector: string
+      waitAfter: number
+    }
+    validationChecks?: Array<{
+      selector: string
+      expectedText?: string
+      checkType: string
+    }>
+    stepTimeout: number
+    takeScreenshotAfterFill: boolean
+    takeScreenshotAfterSubmit: boolean
+    takeScreenshotAfterValidation: boolean
+  }>
+}
+```
+
+### Backend Implementation
+
+#### Service Method
+
+The form automation is handled by the `executeFormAutomation` method in `ScreenshotService`:
+
+```typescript
+private async executeFormAutomation(
+  page: Page, 
+  formSteps: FormStep[],
+  screenshotDir: string,
+  userId: string,
+  screenshotId: string
+): Promise<string[]> {
+  const screenshots: string[] = []
+  
+  for (const [stepIndex, step] of formSteps.entries()) {
+    try {
+      // Set timeout for this step
+      page.setDefaultTimeout(step.stepTimeout)
+      
+      // Fill form inputs
+      for (const input of step.formInputs) {
+        await this.fillFormInput(page, input)
+      }
+      
+      // Take screenshot after filling if requested
+      if (step.takeScreenshotAfterFill) {
+        const screenshot = await this.captureStepScreenshot(
+          page, screenshotDir, `step-${stepIndex + 1}-filled`
+        )
+        screenshots.push(screenshot)
+      }
+      
+      // Submit form if trigger is provided
+      if (step.submitTrigger) {
+        await page.click(step.submitTrigger.selector)
+        await page.waitForTimeout(step.submitTrigger.waitAfter)
+        
+        if (step.takeScreenshotAfterSubmit) {
+          const screenshot = await this.captureStepScreenshot(
+            page, screenshotDir, `step-${stepIndex + 1}-submitted`
+          )
+          screenshots.push(screenshot)
+        }
+      }
+      
+      // Perform validation checks
+      if (step.validationChecks) {
+        await this.performValidationChecks(page, step.validationChecks)
+        
+        if (step.takeScreenshotAfterValidation) {
+          const screenshot = await this.captureStepScreenshot(
+            page, screenshotDir, `step-${stepIndex + 1}-validated`
+          )
+          screenshots.push(screenshot)
+        }
+      }
+      
+    } catch (error) {
+      console.error(`Form automation step ${stepIndex + 1} failed:`, error)
+      // Continue with next step or main screenshot
+    }
+  }
+  
+  return screenshots
+}
+```
+
+### Error Handling
+
+Form automation includes robust error handling:
+
+1. **Step-level Error Isolation**: If one step fails, subsequent steps and main screenshot capture continue
+2. **Timeout Management**: Each step has configurable timeout to prevent hanging
+3. **Selector Validation**: Invalid selectors are logged but don't stop the process
+4. **Progress Updates**: Real-time progress updates via WebSocket even during errors
+5. **Detailed Logging**: Comprehensive error logging for debugging
+
+### Best Practices
+
+#### Selector Strategy
+- Use stable selectors (IDs, data attributes) over fragile ones (classes, positions)
+- Test selectors in browser dev tools before using
+- Use specific selectors to avoid ambiguity
+
+```javascript
+// Good selectors
+"#email-input"                    // ID selector
+"[data-testid='password-field']"  // Data attribute
+"input[name='username']"          // Name attribute
+
+// Avoid fragile selectors
+".form-input:nth-child(2)"        // Position-based
+".btn.btn-primary.submit"         // Multiple classes
+```
+
+#### Timing Configuration
+- Set appropriate timeouts for slow-loading forms
+- Use longer wait times after submission for processing
+- Consider network latency in timeout values
+
+```javascript
+{
+  "stepTimeout": 10000,      // 10 seconds for step completion
+  "submitTrigger": {
+    "selector": "#submit",
+    "waitAfter": 5000        // 5 seconds after submission
+  }
+}
+```
+
+#### Screenshot Strategy
+- Take screenshots at key points to capture form states
+- Use descriptive step names for easy identification
+- Balance screenshot frequency with performance
+
+### Troubleshooting
+
+#### Common Issues
+
+1. **Element Not Found**: Check selector accuracy and timing
+2. **Form Not Submitting**: Verify submit trigger selector and wait time
+3. **Validation Failing**: Ensure validation elements appear after submission
+4. **Timeout Errors**: Increase step timeout for slow forms
+
+#### Debug Tips
+
+1. **Test Selectors**: Use browser dev tools to test CSS selectors
+2. **Check Network**: Monitor network requests during form submission
+3. **Review Logs**: Check backend logs for detailed error information
+4. **Progressive Testing**: Start with simple forms and add complexity
 
 ### Project Model
 ```typescript
@@ -982,6 +1449,24 @@ className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-7
 ```
 
 ### UI Organization
+
+#### Current Modal Sections
+The AddScreenshotModal is organized into the following collapsible sections:
+
+1. **Authentication Options** - HTTP Basic Auth and custom cookies
+2. **Advanced Options** - Device scale, CSS/JS injection, timing options
+3. **Interactive Triggers** - Click selectors for interactive elements
+4. **Form Automation** - Multi-step form filling workflows
+
+#### CSS/JS Injection Timing Options
+Located in the **Advanced Options** section, these options control when custom CSS/JS is injected:
+
+- **Inject CSS/JS before navigation**: Controls whether injection happens before or after page navigation
+- **Inject JS before viewport is set**: Fine-grained control for JS injection timing relative to viewport configuration
+
+These options are conditionally displayed:
+- First option appears when Custom CSS or Custom JS is provided
+- Second option appears when Custom JS is provided AND "inject before navigation" is enabled
 
 #### Collapsible Sections
 Organize fields into logical sections:
