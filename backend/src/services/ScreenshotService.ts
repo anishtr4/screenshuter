@@ -24,8 +24,14 @@ export interface ScreenshotJobData {
   // Screenshot options
   cookiePrevention?: boolean;
   deviceScaleFactor?: number;
+  width?: number;
+  height?: number;
+  fullPage?: boolean;
+  unsticky?: boolean; // Whether to make sticky elements static (true) or keep them sticky (false)
   customCSS?: string;
   customJS?: string;
+  injectBeforeNavigation?: boolean; // When to inject CSS/JS: true = before navigation, false = after navigation
+  injectBeforeViewport?: boolean; // When to inject JS: true = before viewport is set, false = after viewport is set
   // Authentication options
   basicAuth?: {
     username: string;
@@ -49,6 +55,31 @@ export interface ScreenshotJobData {
     waitAfter: number; // milliseconds to wait after clicking before screenshot
     description?: string; // optional description for the action
   }>;
+  // Form automation for multi-step form filling and validation
+  formSteps?: Array<{
+    stepName: string;
+    formInputs: Array<{
+      selector: string;
+      value: string;
+      inputType: 'text' | 'select' | 'checkbox' | 'radio' | 'textarea';
+      description?: string;
+    }>;
+    submitTrigger?: {
+      selector: string;
+      waitAfter: number;
+      description?: string;
+    };
+    validationChecks?: Array<{
+      selector: string;
+      expectedText?: string;
+      checkType: 'exists' | 'text' | 'class' | 'attribute';
+      description?: string;
+    }>;
+    stepTimeout: number;
+    takeScreenshotAfterFill: boolean;
+    takeScreenshotAfterSubmit: boolean;
+    takeScreenshotAfterValidation: boolean;
+  }>;
 }
 
 export interface CrawlJobData {
@@ -59,8 +90,14 @@ export interface CrawlJobData {
   // Screenshot options
   cookiePrevention?: boolean;
   deviceScaleFactor?: number;
+  width?: number;
+  height?: number;
+  fullPage?: boolean;
+  unsticky?: boolean; // Whether to make sticky elements static (true) or keep them sticky (false)
   customCSS?: string;
   customJS?: string;
+  injectBeforeNavigation?: boolean; // When to inject CSS/JS: true = before navigation, false = after navigation
+  injectBeforeViewport?: boolean; // When to inject JS: true = before viewport is set, false = after viewport is set
   // Authentication options
   basicAuth?: {
     username: string;
@@ -76,6 +113,31 @@ export interface CrawlJobData {
     httpOnly?: boolean;
     secure?: boolean;
     sameSite?: 'Strict' | 'Lax' | 'None';
+  }>;
+  // Form automation for multi-step form filling and validation
+  formSteps?: Array<{
+    stepName: string;
+    formInputs: Array<{
+      selector: string;
+      value: string;
+      inputType: 'text' | 'select' | 'checkbox' | 'radio' | 'textarea';
+      description?: string;
+    }>;
+    submitTrigger?: {
+      selector: string;
+      waitAfter: number;
+      description?: string;
+    };
+    validationChecks?: Array<{
+      selector: string;
+      expectedText?: string;
+      checkType: 'exists' | 'text' | 'class' | 'attribute';
+      description?: string;
+    }>;
+    stepTimeout: number;
+    takeScreenshotAfterFill: boolean;
+    takeScreenshotAfterSubmit: boolean;
+    takeScreenshotAfterValidation: boolean;
   }>;
 }
 
@@ -216,8 +278,14 @@ export class ScreenshotService {
   private async configurePageForScreenshot(page: Page, options?: {
     cookiePrevention?: boolean;
     deviceScaleFactor?: number;
+    width?: number;
+    height?: number;
+    fullPage?: boolean;
+    unsticky?: boolean;
     customCSS?: string;
     customJS?: string;
+    injectBeforeNavigation?: boolean;
+    injectBeforeViewport?: boolean;
     basicAuth?: {
       username: string;
       password: string;
@@ -243,17 +311,38 @@ export class ScreenshotService {
     const {
       cookiePrevention = process.env.COOKIE_PREVENTION_ENABLED === 'true' || true,
       deviceScaleFactor = parseFloat(process.env.DEVICE_SCALE_FACTOR || '2'),
+      width = 1920,
+      height = 1080,
+      fullPage = true,
       customCSS = '',
       customJS = '',
+      injectBeforeNavigation = false, // Default to inject after navigation
+      injectBeforeViewport = false, // Default to inject JS after viewport is set
       basicAuth,
       customCookies
     } = options || {};
     
-    // Set viewport size and media emulation
+    // Inject JS before viewport if timing is set to before viewport
+    if (injectBeforeNavigation && injectBeforeViewport && customJS && customJS.trim()) {
+      await page.addScriptTag({
+        content: customJS
+      });
+      logger.info('Custom JavaScript injected before viewport is set');
+    }
+    
+    // Set viewport size using user-provided or default dimensions
     await page.setViewportSize({ 
-      width: 1920, 
-      height: 1080 
+      width, 
+      height 
     });
+    
+    // Inject JS after viewport if timing is set to after viewport (default)
+    if (injectBeforeNavigation && !injectBeforeViewport && customJS && customJS.trim()) {
+      await page.addScriptTag({
+        content: customJS
+      });
+      logger.info('Custom JavaScript injected after viewport is set');
+    }
     
     // Set media emulation for consistent screenshots
     await page.emulateMedia({ 
@@ -397,6 +486,13 @@ export class ScreenshotService {
     }
 
     // Inject custom cookies if provided
+    logger.info(`🍪 Cookie injection debug:`, {
+      customCookiesType: typeof customCookies,
+      customCookiesLength: customCookies?.length,
+      customCookiesArray: Array.isArray(customCookies),
+      firstCookie: customCookies?.[0]
+    });
+    
     if (customCookies && customCookies.length > 0) {
       try {
         // Convert custom cookies to Playwright format
@@ -594,12 +690,28 @@ export class ScreenshotService {
       logger.info('Cookie prevention configured for page');
     }
 
+    // Inject custom CSS if provided and timing is set to before navigation
+    if (injectBeforeNavigation && customCSS && customCSS.trim()) {
+      await page.addStyleTag({
+        content: customCSS
+      });
+      logger.info('Custom CSS injected before navigation');
+    }
+    
+    // Note: JS injection before navigation is now handled above based on viewport timing
+    // This ensures proper timing control for JS injection relative to viewport setting
+  }
+
+  /**
+   * Inject CSS/JS after page navigation
+   */
+  private async injectCustomCSSJS(page: Page, customCSS?: string, customJS?: string): Promise<void> {
     // Inject custom CSS if provided
     if (customCSS && customCSS.trim()) {
       await page.addStyleTag({
         content: customCSS
       });
-      logger.info('Custom CSS injected');
+      logger.info('Custom CSS injected after navigation');
     }
 
     // Inject custom JavaScript if provided
@@ -607,7 +719,300 @@ export class ScreenshotService {
       await page.addScriptTag({
         content: customJS
       });
-      logger.info('Custom JavaScript injected');
+      logger.info('Custom JavaScript injected after navigation');
+    }
+  }
+
+  /**
+   * Make sticky elements unsticky (static) for clean full page screenshot
+   */
+  private async makeStickyElementsStatic(page: Page): Promise<void> {
+    try {
+      // Scroll to top first
+      await page.evaluate(`window.scrollTo(0, 0)`);
+      await page.waitForTimeout(300);
+      
+      // Convert sticky/fixed elements to static positioning
+      await page.evaluate(`
+        // Store original styles to restore later if needed
+        window.modifiedStickyElements = [];
+        
+        // Find all sticky/fixed elements
+        const allElements = document.querySelectorAll('*');
+        
+        allElements.forEach(element => {
+          const computedStyle = window.getComputedStyle(element);
+          const position = computedStyle.position;
+          
+          if (position === 'sticky' || position === 'fixed') {
+            // Store original values
+            window.modifiedStickyElements.push({
+              element: element,
+              originalPosition: position,
+              originalTop: computedStyle.top,
+              originalZIndex: computedStyle.zIndex
+            });
+            
+            // Convert to static positioning
+            element.style.setProperty('position', 'static', 'important');
+            element.style.setProperty('top', 'auto', 'important');
+            element.style.setProperty('bottom', 'auto', 'important');
+            element.style.setProperty('left', 'auto', 'important');
+            element.style.setProperty('right', 'auto', 'important');
+            element.style.setProperty('z-index', 'auto', 'important');
+          }
+        });
+        
+        console.log('Made', window.modifiedStickyElements.length, 'sticky/fixed elements static');
+      `);
+      
+      // Wait for layout to recalculate
+      await page.waitForTimeout(500);
+      
+      logger.info('✅ Sticky elements converted to static positioning for clean full page screenshot');
+    } catch (error) {
+      logger.warn('⚠️ Error making sticky elements static:', error);
+    }
+  }
+
+  /**
+   * Execute multi-step form automation with screenshots
+   */
+  private async executeFormAutomation(
+    page: Page, 
+    formSteps: Array<{
+      stepName: string;
+      formInputs: Array<{
+        selector: string;
+        value: string;
+        inputType: 'text' | 'select' | 'checkbox' | 'radio' | 'textarea';
+        description?: string;
+      }>;
+      submitTrigger?: {
+        selector: string;
+        waitAfter: number;
+        description?: string;
+      };
+      validationChecks?: Array<{
+        selector: string;
+        expectedText?: string;
+        checkType: 'exists' | 'text' | 'class' | 'attribute';
+        description?: string;
+      }>;
+      stepTimeout: number;
+      takeScreenshotAfterFill: boolean;
+      takeScreenshotAfterSubmit: boolean;
+      takeScreenshotAfterValidation: boolean;
+    }>,
+    screenshotDir: string,
+    userId: string,
+    screenshotId: string
+  ): Promise<string[]> {
+    const screenshotPaths: string[] = [];
+    
+    try {
+      logger.info(`🔄 Starting form automation with ${formSteps.length} steps`);
+      
+      for (let stepIndex = 0; stepIndex < formSteps.length; stepIndex++) {
+        const step = formSteps[stepIndex];
+        if (!step) continue;
+        
+        logger.info(`📝 Executing step ${stepIndex + 1}: ${step.stepName}`);
+        
+        // Emit progress
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 30 + (stepIndex / formSteps.length) * 40,
+          stage: `Form Step ${stepIndex + 1}: ${step.stepName}`,
+        });
+        
+        // Fill form inputs
+        if (step.formInputs && step.formInputs.length > 0) {
+          logger.info(`📋 Filling ${step.formInputs.length} form inputs`);
+          
+          for (const input of step.formInputs) {
+            try {
+              await page.waitForSelector(input.selector, { timeout: step.stepTimeout });
+              
+              switch (input.inputType) {
+                case 'text':
+                case 'textarea':
+                  await page.fill(input.selector, input.value);
+                  break;
+                case 'select':
+                  await page.selectOption(input.selector, input.value);
+                  break;
+                case 'checkbox':
+                  const isChecked = await page.isChecked(input.selector);
+                  const shouldCheck = input.value.toLowerCase() === 'true';
+                  if (isChecked !== shouldCheck) {
+                    await page.check(input.selector);
+                  }
+                  break;
+                case 'radio':
+                  await page.check(input.selector);
+                  break;
+              }
+              
+              logger.info(`✅ Filled input: ${input.selector} = ${input.value}`);
+              await page.waitForTimeout(500); // Small delay between inputs
+            } catch (error) {
+              logger.error(`❌ Error filling input ${input.selector}:`, error);
+              throw error;
+            }
+          }
+          
+          // Take screenshot after filling if requested
+          if (step.takeScreenshotAfterFill) {
+            const fillScreenshotPath = path.join(screenshotDir, `step-${stepIndex + 1}-filled.png`);
+            await page.screenshot({ path: fillScreenshotPath, fullPage: true });
+            screenshotPaths.push(fillScreenshotPath);
+            logger.info(`📸 Screenshot taken after filling: ${fillScreenshotPath}`);
+          }
+        }
+        
+        // Submit form if trigger is provided
+        if (step.submitTrigger) {
+          logger.info(`🚀 Submitting form with trigger: ${step.submitTrigger.selector}`);
+          
+          try {
+            await page.waitForSelector(step.submitTrigger.selector, { timeout: step.stepTimeout });
+            await page.click(step.submitTrigger.selector);
+            
+            // Wait after submit
+            await page.waitForTimeout(step.submitTrigger.waitAfter);
+            
+            // Take screenshot after submit if requested
+            if (step.takeScreenshotAfterSubmit) {
+              const submitScreenshotPath = path.join(screenshotDir, `step-${stepIndex + 1}-submitted.png`);
+              await page.screenshot({ path: submitScreenshotPath, fullPage: true });
+              screenshotPaths.push(submitScreenshotPath);
+              logger.info(`📸 Screenshot taken after submit: ${submitScreenshotPath}`);
+            }
+          } catch (error) {
+            logger.error(`❌ Error submitting form:`, error);
+            throw error;
+          }
+        }
+        
+        // Perform validation checks if provided
+        if (step.validationChecks && step.validationChecks.length > 0) {
+          logger.info(`🔍 Performing ${step.validationChecks.length} validation checks`);
+          
+          for (const validation of step.validationChecks) {
+            try {
+              switch (validation.checkType) {
+                case 'exists':
+                  await page.waitForSelector(validation.selector, { timeout: step.stepTimeout });
+                  logger.info(`✅ Element exists: ${validation.selector}`);
+                  break;
+                case 'text':
+                  const element = await page.waitForSelector(validation.selector, { timeout: step.stepTimeout });
+                  const text = await element?.textContent();
+                  if (validation.expectedText && text?.includes(validation.expectedText)) {
+                    logger.info(`✅ Text validation passed: ${validation.selector} contains "${validation.expectedText}"`);
+                  } else {
+                    logger.warn(`⚠️ Text validation failed: ${validation.selector} does not contain "${validation.expectedText}"`);
+                  }
+                  break;
+                case 'class':
+                  const hasClass = await page.evaluate(`
+                    (() => {
+                      const el = document.querySelector('${validation.selector.replace(/'/g, "\\'")}')
+                      return el?.classList.contains('${(validation.expectedText || '').replace(/'/g, "\\'")}')
+                    })()
+                  `);
+                  logger.info(`${hasClass ? '✅' : '⚠️'} Class validation: ${validation.selector} ${hasClass ? 'has' : 'missing'} class "${validation.expectedText}"`);
+                  break;
+                case 'attribute':
+                  const attrValue = await page.getAttribute(validation.selector, validation.expectedText || '');
+                  logger.info(`${attrValue ? '✅' : '⚠️'} Attribute validation: ${validation.selector} attribute "${validation.expectedText}" = "${attrValue}"`);
+                  break;
+              }
+            } catch (error) {
+              logger.warn(`⚠️ Validation check failed for ${validation.selector}:`, error);
+            }
+          }
+          
+          // Take screenshot after validation if requested
+          if (step.takeScreenshotAfterValidation) {
+            const validationScreenshotPath = path.join(screenshotDir, `step-${stepIndex + 1}-validated.png`);
+            await page.screenshot({ path: validationScreenshotPath, fullPage: true });
+            screenshotPaths.push(validationScreenshotPath);
+            logger.info(`📸 Screenshot taken after validation: ${validationScreenshotPath}`);
+          }
+        }
+        
+        logger.info(`✅ Completed step ${stepIndex + 1}: ${step.stepName}`);
+      }
+      
+      logger.info(`🎉 Form automation completed successfully. Generated ${screenshotPaths.length} screenshots.`);
+      return screenshotPaths;
+      
+    } catch (error) {
+      logger.error('❌ Error in form automation:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Scroll through the entire page to ensure all content is loaded before screenshot
+   */
+  private async scrollFullPage(page: Page): Promise<void> {
+    try {
+      // Get page dimensions
+      const pageHeight = await page.evaluate(`
+        Math.max(
+          document.body.scrollHeight,
+          document.body.offsetHeight,
+          document.documentElement.clientHeight,
+          document.documentElement.scrollHeight,
+          document.documentElement.offsetHeight
+        )
+      `);
+
+      const viewportHeight = await page.evaluate(`window.innerHeight`) as number;
+      const scrollSteps = Math.ceil((pageHeight as number) / viewportHeight);
+      
+      logger.info(`📜 Scrolling through page: ${scrollSteps} steps (${pageHeight}px total height)`);
+
+      // Scroll down in steps to trigger lazy loading
+      for (let i = 0; i <= scrollSteps; i++) {
+        const scrollY = (i * viewportHeight);
+        await page.evaluate(`window.scrollTo(0, ${scrollY})`);
+        
+        // Wait for content to load after each scroll
+        await page.waitForTimeout(500);
+        
+        // Trigger any lazy loading by dispatching scroll events
+        await page.evaluate(`
+          window.dispatchEvent(new Event('scroll'));
+          window.dispatchEvent(new Event('resize'));
+        `);
+        
+        // Wait for network requests to complete (lazy loading)
+        try {
+          await page.waitForLoadState('networkidle', { timeout: 2000 });
+        } catch {
+          // Continue if networkidle times out
+        }
+      }
+
+      // Scroll back to top
+      await page.evaluate(`window.scrollTo(0, 0)`);
+      
+      // Wait for any final content to settle and trigger final events
+      await page.evaluate(`
+        window.dispatchEvent(new Event('scroll'));
+        window.dispatchEvent(new Event('resize'));
+      `);
+      
+      await page.waitForTimeout(1000);
+      
+      logger.info('✅ Full page scroll completed');
+    } catch (error) {
+      logger.warn('⚠️ Error during full page scroll:', error);
     }
   }
 
@@ -845,14 +1250,23 @@ export class ScreenshotService {
       collectionName,
       cookiePrevention,
       deviceScaleFactor,
+      width,
+      height,
+      fullPage,
+      unsticky,
       customCSS,
       customJS,
+      injectBeforeNavigation,
+      injectBeforeViewport,
       basicAuth,
       customCookies
     } = data;
     
     // Extract trigger selectors for interactive screenshots
     const { triggerSelectors } = data;
+    
+    // Extract form steps for form automation
+    const { formSteps } = data;
     
     // DEBUG: Track function calls to detect duplicates
     logger.info(`🔥 captureScreenshot STARTED for screenshotId: ${screenshotId}`, {
@@ -911,8 +1325,14 @@ export class ScreenshotService {
       await this.configurePageForScreenshot(page, {
         ...(cookiePrevention !== undefined && { cookiePrevention }),
         ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+        ...(width !== undefined && { width }),
+        ...(height !== undefined && { height }),
+        ...(fullPage !== undefined && { fullPage }),
+        ...(unsticky !== undefined && { unsticky }),
         ...(customCSS !== undefined && { customCSS }),
         ...(customJS !== undefined && { customJS }),
+        ...(injectBeforeNavigation !== undefined && { injectBeforeNavigation }),
+        ...(injectBeforeViewport !== undefined && { injectBeforeViewport }),
         ...(basicAuth !== undefined && { basicAuth }),
         ...(customCookies !== undefined && { customCookies })
       });
@@ -965,6 +1385,60 @@ export class ScreenshotService {
       // Wait a bit for dynamic content
       await page.waitForTimeout(2000);
 
+      // Inject CSS/JS after navigation if timing is set to after navigation (default)
+      if (!injectBeforeNavigation && (customCSS || customJS)) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 55,
+          stage: 'Injecting custom CSS/JS...',
+          metadata
+        });
+        
+        await this.injectCustomCSSJS(page, customCSS, customJS);
+      }
+
+      // Perform full page scroll if enabled to trigger lazy loading
+      if (fullPage) {
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 55,
+          stage: 'Scrolling through page to load all content...',
+          metadata
+        });
+        
+        await this.scrollFullPage(page);
+        
+        // Conditionally make sticky elements static based on unsticky option
+        if (unsticky) {
+          io.to(`user-${userId}`).emit('screenshot-progress', {
+            screenshotId,
+            status: 'processing',
+            progress: 65,
+            stage: 'Converting sticky elements to static positioning...',
+            metadata
+          });
+          
+          await this.makeStickyElementsStatic(page);
+        } else {
+          // Just scroll to bottom for natural sticky behavior
+          io.to(`user-${userId}`).emit('screenshot-progress', {
+            screenshotId,
+            status: 'processing',
+            progress: 65,
+            stage: 'Scrolling to bottom for natural sticky positioning...',
+            metadata
+          });
+          
+          // Scroll to bottom where sticky elements naturally become unsticky
+          await page.evaluate(`
+            window.scrollTo(0, document.body.scrollHeight);
+          `);
+          await page.waitForTimeout(1000); // Wait for scroll and sticky elements to settle
+        }
+      }
+
       // Get page title
       const title = await page.title();
 
@@ -1007,6 +1481,35 @@ export class ScreenshotService {
         }
       }
 
+      // Execute form automation if provided (only for individual screenshots, not collections)
+      let formScreenshotPaths: string[] = [];
+      if (formSteps && formSteps.length > 0 && !collectionId) {
+        logger.info(`📝 Executing form automation with ${formSteps.length} steps`);
+        
+        io.to(`user-${userId}`).emit('screenshot-progress', {
+          screenshotId,
+          status: 'processing',
+          progress: 65,
+          stage: `Executing form automation with ${formSteps.length} steps...`,
+          metadata
+        });
+        
+        try {
+          formScreenshotPaths = await this.executeFormAutomation(
+            page,
+            formSteps,
+            screenshotDir,
+            userId,
+            screenshotId
+          );
+          
+          logger.info(`✅ Generated ${formScreenshotPaths.length} form automation screenshots`);
+        } catch (error) {
+          logger.error('❌ Error executing form automation:', error);
+          // Continue with main screenshot even if form automation fails
+        }
+      }
+
       // Emit progress: taking screenshot
       io.to(`user-${userId}`).emit('screenshot-progress', {
         screenshotId,
@@ -1016,12 +1519,62 @@ export class ScreenshotService {
         metadata
       });
 
-      // Take screenshot
-      const screenshotBuffer = await page.screenshot({
-        path: imagePath,
-        fullPage: true,
-        type: 'png'
+      // Take screenshot with user-provided dimensions and fullPage option
+      logger.info(`🔍 Screenshot options debug:`, {
+        fullPageParam: fullPage,
+        widthParam: width,
+        heightParam: height,
+        fullPageResolved: fullPage !== undefined ? fullPage : true
       });
+      
+      const screenshotOptions: any = {
+        path: imagePath,
+        type: 'png',
+        fullPage: fullPage !== undefined ? fullPage : true
+      };
+      
+      // For full page screenshots, keep it natural and simple
+      if (screenshotOptions.fullPage) {
+        // Debug: Log page dimensions and scroll position
+        const pageInfo = await page.evaluate(`({
+          scrollTop: window.pageYOffset || document.documentElement.scrollTop,
+          scrollLeft: window.pageXOffset || document.documentElement.scrollLeft,
+          pageHeight: Math.max(
+            document.body.scrollHeight,
+            document.body.offsetHeight,
+            document.documentElement.clientHeight,
+            document.documentElement.scrollHeight,
+            document.documentElement.offsetHeight
+          ),
+          viewportHeight: window.innerHeight,
+          viewportWidth: window.innerWidth
+        })`);
+        
+        logger.info(`📊 Page info before natural full page screenshot:`, pageInfo);
+      }
+      
+      // If not full page, use clip with user dimensions or viewport dimensions
+      if (!screenshotOptions.fullPage) {
+        const clipWidth = width || 1920;
+        const clipHeight = height || 1080;
+        screenshotOptions.clip = {
+          x: 0,
+          y: 0,
+          width: clipWidth,
+          height: clipHeight
+        };
+        logger.info(`📐 Using clip region: ${clipWidth}x${clipHeight}`);
+      } else {
+        logger.info(`📄 Using full page screenshot`);
+      }
+      
+      logger.info(`📸 Final screenshot options:`, {
+        fullPage: screenshotOptions.fullPage,
+        hasClip: !!screenshotOptions.clip,
+        clip: screenshotOptions.clip
+      });
+      
+      const screenshotBuffer = await page.screenshot(screenshotOptions);
 
       await page.close();
 
@@ -1130,8 +1683,14 @@ export class ScreenshotService {
       projectId,
       cookiePrevention,
       deviceScaleFactor,
+      width,
+      height,
+      fullPage,
+      unsticky,
       customCSS,
       customJS,
+      injectBeforeNavigation,
+      injectBeforeViewport,
       basicAuth,
       customCookies
     } = data;
@@ -1167,8 +1726,14 @@ export class ScreenshotService {
       await this.configurePageForScreenshot(page, {
         ...(cookiePrevention !== undefined && { cookiePrevention }),
         ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+        ...(width !== undefined && { width }),
+        ...(height !== undefined && { height }),
+        ...(fullPage !== undefined && { fullPage }),
+        ...(unsticky !== undefined && { unsticky }),
         ...(customCSS !== undefined && { customCSS }),
         ...(customJS !== undefined && { customJS }),
+        ...(injectBeforeNavigation !== undefined && { injectBeforeNavigation }),
+        ...(injectBeforeViewport !== undefined && { injectBeforeViewport }),
         ...(basicAuth !== undefined && { basicAuth }),
         ...(customCookies !== undefined && { customCookies })
       });
@@ -1484,8 +2049,14 @@ export class ScreenshotService {
     // Screenshot options
     cookiePrevention?: boolean;
     deviceScaleFactor?: number;
+    width?: number;
+    height?: number;
+    fullPage?: boolean;
+    unsticky?: boolean;
     customCSS?: string;
     customJS?: string;
+    injectBeforeNavigation?: boolean;
+    injectBeforeViewport?: boolean;
     // Authentication options
     basicAuth?: {
       username: string;
@@ -1518,8 +2089,14 @@ export class ScreenshotService {
       autoScroll,
       cookiePrevention,
       deviceScaleFactor,
+      width,
+      height,
+      fullPage,
+      unsticky,
       customCSS,
       customJS,
+      injectBeforeNavigation,
+      injectBeforeViewport,
       basicAuth,
       customCookies
     } = data;
@@ -1539,8 +2116,14 @@ export class ScreenshotService {
       await this.configurePageForScreenshot(page, {
         ...(cookiePrevention !== undefined && { cookiePrevention }),
         ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+        ...(width !== undefined && { width }),
+        ...(height !== undefined && { height }),
+        ...(fullPage !== undefined && { fullPage }),
+        ...(unsticky !== undefined && { unsticky }),
         ...(customCSS !== undefined && { customCSS }),
         ...(customJS !== undefined && { customJS }),
+        ...(injectBeforeNavigation !== undefined && { injectBeforeNavigation }),
+        ...(injectBeforeViewport !== undefined && { injectBeforeViewport }),
         ...(basicAuth !== undefined && { basicAuth }),
         ...(customCookies !== undefined && { customCookies })
       });
@@ -1851,8 +2434,14 @@ export class ScreenshotService {
       userId,
       cookiePrevention,
       deviceScaleFactor,
+      width,
+      height,
+      fullPage,
+      unsticky,
       customCSS,
       customJS,
+      injectBeforeNavigation,
+      injectBeforeViewport,
       basicAuth,
       customCookies
     } = data;
@@ -1905,8 +2494,13 @@ export class ScreenshotService {
             collectionName,
             ...(cookiePrevention !== undefined && { cookiePrevention }),
             ...(deviceScaleFactor !== undefined && { deviceScaleFactor }),
+            ...(width !== undefined && { width }),
+            ...(height !== undefined && { height }),
+            ...(fullPage !== undefined && { fullPage }),
+        ...(unsticky !== undefined && { unsticky }),
             ...(customCSS !== undefined && { customCSS }),
-            ...(customJS !== undefined && { customJS })
+            ...(customJS !== undefined && { customJS }),
+            ...(injectBeforeNavigation !== undefined && { injectBeforeNavigation })
           });
           
           completedCount++;

@@ -23,7 +23,8 @@ import {
   Eye,
   EyeOff,
   MousePointer,
-  Plus
+  Plus,
+  FileText
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { apiClient } from '@/lib/api'
@@ -35,6 +36,9 @@ export interface ScreenshotFormData {
   mode: 'normal' | 'crawl' | 'frame'
   options: {
     fullPage: boolean
+    unsticky?: boolean // Whether to make sticky elements static (true) or keep them sticky (false)
+    injectBeforeNavigation?: boolean // When to inject CSS/JS: true = before navigation, false = after navigation
+    injectBeforeViewport?: boolean // When to inject JS: true = before viewport is set, false = after viewport is set
     width: number
     height: number
     waitTime: number
@@ -70,6 +74,31 @@ export interface ScreenshotFormData {
     waitAfter: number
     description?: string
   }>
+  // Form automation for multi-step form filling and validation
+  formSteps?: Array<{
+    stepName: string
+    formInputs: Array<{
+      selector: string
+      value: string
+      inputType: 'text' | 'select' | 'checkbox' | 'radio' | 'textarea'
+      description?: string
+    }>
+    submitTrigger?: {
+      selector: string
+      waitAfter: number
+      description?: string
+    }
+    validationChecks?: Array<{
+      selector: string
+      expectedText?: string
+      checkType: 'exists' | 'text' | 'class' | 'attribute'
+      description?: string
+    }>
+    stepTimeout: number
+    takeScreenshotAfterFill: boolean
+    takeScreenshotAfterSubmit: boolean
+    takeScreenshotAfterValidation: boolean
+  }>
   // New crawl workflow properties
   selectedUrls?: string[]
   collectionId?: string
@@ -96,6 +125,9 @@ export function AddScreenshotModal({
     mode: 'normal',
     options: {
       fullPage: true,
+      unsticky: true, // Default to making sticky elements static
+      injectBeforeNavigation: false, // Default to injecting CSS/JS after navigation
+      injectBeforeViewport: false, // Default to injecting JS after viewport is set
       width: 1920,
       height: 1080,
       waitTime: 2000,
@@ -131,6 +163,7 @@ export function AddScreenshotModal({
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false)
   const [showPasswordAuth, setShowPasswordAuth] = useState(false)
   const [showTriggerOptions, setShowTriggerOptions] = useState(false)
+  const [showFormAutomation, setShowFormAutomation] = useState(false)
 
 
   if (!isOpen) return null
@@ -243,7 +276,9 @@ export function AddScreenshotModal({
         basicAuth: formData.basicAuth,
         customCookies: formData.customCookies,
         // Include trigger selectors for interactive screenshots
-        triggerSelectors: formData.triggerSelectors
+        triggerSelectors: formData.triggerSelectors,
+        // Include form steps for form automation
+        formSteps: formData.formSteps
       }
       
       console.log('📸 Normal screenshot data being submitted:', normalData)
@@ -784,6 +819,25 @@ export function AddScreenshotModal({
                     Capture full page (scroll to bottom)
                   </label>
                 </div>
+                
+                {/* Unsticky Elements Option - only show when fullPage is enabled */}
+                {formData.options.fullPage && (
+                  <div className="flex items-center space-x-3 ml-6">
+                    <input
+                      type="checkbox"
+                      id="unsticky"
+                      checked={formData.options.unsticky ?? true}
+                      onChange={(e) => setFormData(prev => ({
+                        ...prev,
+                        options: { ...prev.options, unsticky: e.target.checked }
+                      }))}
+                      className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
+                    />
+                    <label htmlFor="unsticky" className="text-sm text-slate-600 dark:text-slate-400">
+                      Make sticky elements static (recommended for clean screenshots)
+                    </label>
+                  </div>
+                )}
               </div>
 
               {/* Authentication Options */}
@@ -992,6 +1046,51 @@ export function AddScreenshotModal({
                         rows={3}
                       />
                     </div>
+                    
+                    {/* CSS/JS Injection Timing Options */}
+                    {(formData.options.customCSS || formData.options.customJS) && (
+                      <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-600">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Clock className="h-4 w-4 text-blue-500" />
+                          <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Injection Timing</span>
+                        </div>
+                        
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="checkbox"
+                            id="injectBeforeNavigation"
+                            checked={formData.options.injectBeforeNavigation ?? false}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              options: { ...prev.options, injectBeforeNavigation: e.target.checked }
+                            }))}
+                            className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
+                          />
+                          <label htmlFor="injectBeforeNavigation" className="text-sm text-slate-600 dark:text-slate-400">
+                            Inject CSS/JS before navigation (default: after navigation)
+                          </label>
+                        </div>
+                        
+                        {/* JS Viewport Timing Option - only show when JS is provided and inject before navigation is enabled */}
+                        {formData.options.customJS && formData.options.injectBeforeNavigation && (
+                          <div className="flex items-center space-x-3 ml-6">
+                            <input
+                              type="checkbox"
+                              id="injectBeforeViewport"
+                              checked={formData.options.injectBeforeViewport ?? false}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                options: { ...prev.options, injectBeforeViewport: e.target.checked }
+                              }))}
+                              className="rounded border-blue-300 text-blue-500 focus:ring-blue-500"
+                            />
+                            <label htmlFor="injectBeforeViewport" className="text-sm text-slate-500 dark:text-slate-500">
+                              Inject JS before viewport is set (default: after viewport)
+                            </label>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1112,6 +1211,346 @@ export function AddScreenshotModal({
                           Add Trigger Selector
                         </button>
                       </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Form Automation Section */}
+              {formData.mode === 'normal' && (
+                <div className="space-y-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowFormAutomation(!showFormAutomation)}
+                    className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Form Automation
+                    {showFormAutomation ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                  </button>
+                  
+                  {showFormAutomation && (
+                    <div className="space-y-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                      <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                        Automate multi-step form filling with validation and screenshots at each stage.
+                      </p>
+
+                  {(formData.formSteps || []).length > 0 && (
+                    <div className="space-y-3">
+                      <div className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                        Form Steps ({(formData.formSteps || []).length})
+                      </div>
+                      
+                      <div className="space-y-3 max-h-80 overflow-y-auto">
+                        {(formData.formSteps || []).map((step, stepIndex) => (
+                          <div key={stepIndex} className="p-3 border border-slate-200 dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-800">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Step {stepIndex + 1}: {step.stepName || 'Unnamed Step'}
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newSteps = (formData.formSteps || []).filter((_, i) => i !== stepIndex)
+                                  setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                }}
+                                className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                            
+                            {/* Step Name */}
+                            <div className="mb-2">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                Step Name
+                              </label>
+                              <Input
+                                type="text"
+                                value={step.stepName}
+                                onChange={(e) => {
+                                  const newSteps = [...(formData.formSteps || [])]
+                                  newSteps[stepIndex] = { ...newSteps[stepIndex], stepName: e.target.value }
+                                  setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                }}
+                                className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                                placeholder="e.g., Fill Login Form"
+                              />
+                            </div>
+
+                            {/* Step Timeout */}
+                            <div className="mb-2">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                Step Timeout (ms)
+                              </label>
+                              <Input
+                                type="number"
+                                value={step.stepTimeout}
+                                onChange={(e) => {
+                                  const newSteps = [...(formData.formSteps || [])]
+                                  newSteps[stepIndex] = { ...newSteps[stepIndex], stepTimeout: parseInt(e.target.value) || 5000 }
+                                  setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                }}
+                                className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                                placeholder="5000"
+                              />
+                            </div>
+
+                            {/* Screenshot Options */}
+                            <div className="mb-2">
+                              <label className="text-xs text-slate-600 dark:text-slate-400 block mb-1">
+                                Screenshot Options
+                              </label>
+                              <div className="flex flex-wrap gap-3">
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={step.takeScreenshotAfterFill}
+                                    onChange={(e) => {
+                                      const newSteps = [...(formData.formSteps || [])]
+                                      newSteps[stepIndex] = { ...newSteps[stepIndex], takeScreenshotAfterFill: e.target.checked }
+                                      setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                    }}
+                                    className="mr-1 h-3 w-3"
+                                  />
+                                  <span className="text-xs text-slate-700 dark:text-slate-300">After Fill</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={step.takeScreenshotAfterSubmit}
+                                    onChange={(e) => {
+                                      const newSteps = [...(formData.formSteps || [])]
+                                      newSteps[stepIndex] = { ...newSteps[stepIndex], takeScreenshotAfterSubmit: e.target.checked }
+                                      setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                    }}
+                                    className="mr-1 h-3 w-3"
+                                  />
+                                  <span className="text-xs text-slate-700 dark:text-slate-300">After Submit</span>
+                                </label>
+                                <label className="flex items-center">
+                                  <input
+                                    type="checkbox"
+                                    checked={step.takeScreenshotAfterValidation}
+                                    onChange={(e) => {
+                                      const newSteps = [...(formData.formSteps || [])]
+                                      newSteps[stepIndex] = { ...newSteps[stepIndex], takeScreenshotAfterValidation: e.target.checked }
+                                      setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                    }}
+                                    className="mr-1 h-3 w-3"
+                                  />
+                                  <span className="text-xs text-slate-700 dark:text-slate-300">After Validation</span>
+                                </label>
+                              </div>
+                            </div>
+
+                            {/* Form Inputs */}
+                            <div className="mb-2">
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="text-xs text-slate-600 dark:text-slate-400 font-medium">
+                                  Form Inputs ({(step.formInputs || []).length})
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const newSteps = [...(formData.formSteps || [])]
+                                    const newInput = { selector: '', value: '', inputType: 'text' as const, description: '' }
+                                    newSteps[stepIndex] = { 
+                                      ...newSteps[stepIndex], 
+                                      formInputs: [...(newSteps[stepIndex].formInputs || []), newInput] 
+                                    }
+                                    setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                  }}
+                                  className="text-xs px-1 py-0.5 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-600 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                >
+                                  <Plus className="h-3 w-3 inline mr-1" />Add
+                                </button>
+                              </div>
+                              
+                              {(step.formInputs || []).map((input, inputIndex) => (
+                                <div key={inputIndex} className="p-2 border border-slate-200 dark:border-slate-600 rounded mb-1 bg-white dark:bg-slate-700">
+                                  <div className="grid grid-cols-2 gap-1 mb-1">
+                                      <Input
+                                        type="text"
+                                        value={input.selector}
+                                        onChange={(e) => {
+                                          const newSteps = [...(formData.formSteps || [])]
+                                          const newInputs = [...newSteps[stepIndex].formInputs]
+                                          newInputs[inputIndex] = { ...newInputs[inputIndex], selector: e.target.value }
+                                          newSteps[stepIndex] = { ...newSteps[stepIndex], formInputs: newInputs }
+                                          setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                        }}
+                                        className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                                        placeholder="#email, .username, [name='email']"
+                                      />
+                                    <Input
+                                      type="text"
+                                      value={input.value}
+                                      onChange={(e) => {
+                                        const newSteps = [...(formData.formSteps || [])]
+                                        const newInputs = [...newSteps[stepIndex].formInputs]
+                                        newInputs[inputIndex] = { ...newInputs[inputIndex], value: e.target.value }
+                                        newSteps[stepIndex] = { ...newSteps[stepIndex], formInputs: newInputs }
+                                        setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                      }}
+                                      className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                                      placeholder="Value"
+                                    />
+                                  </div>
+                                  <div className="flex items-center justify-between">
+                                    <select
+                                      value={input.inputType}
+                                      onChange={(e) => {
+                                        const newSteps = [...(formData.formSteps || [])]
+                                        const newInputs = [...(newSteps[stepIndex].formInputs || [])]
+                                        newInputs[inputIndex] = { ...newInputs[inputIndex], inputType: e.target.value as any }
+                                        newSteps[stepIndex] = { ...newSteps[stepIndex], formInputs: newInputs }
+                                        setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                      }}
+                                      className="px-2 py-1 text-xs border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-800"
+                                    >
+                                      <option value="text">Text</option>
+                                      <option value="select">Select</option>
+                                      <option value="checkbox">Checkbox</option>
+                                      <option value="radio">Radio</option>
+                                      <option value="textarea">Textarea</option>
+                                    </select>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const newSteps = [...(formData.formSteps || [])]
+                                        const newInputs = (newSteps[stepIndex].formInputs || []).filter((_, i) => i !== inputIndex)
+                                        newSteps[stepIndex] = { ...newSteps[stepIndex], formInputs: newInputs }
+                                        setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                      }}
+                                      className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 p-1"
+                                    >
+                                      <Trash2 className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Submit Trigger */}
+                            <div className="mb-2">
+                              <label className="flex items-center mb-1">
+                                <input
+                                  type="checkbox"
+                                  checked={!!step.submitTrigger}
+                                  onChange={(e) => {
+                                    const newSteps = [...(formData.formSteps || [])]
+                                    if (e.target.checked) {
+                                      newSteps[stepIndex] = { 
+                                        ...newSteps[stepIndex], 
+                                        submitTrigger: { selector: '', waitAfter: 2000, description: '' }
+                                      }
+                                    } else {
+                                      const { submitTrigger, ...rest } = newSteps[stepIndex]
+                                      newSteps[stepIndex] = rest
+                                    }
+                                    setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                  }}
+                                  className="mr-1 h-3 w-3"
+                                />
+                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300">Submit Trigger</span>
+                              </label>
+                              
+                              {step.submitTrigger && (
+                                <div className="p-2 border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700">
+                                  <div className="grid grid-cols-2 gap-1">
+                                    <Input
+                                      type="text"
+                                      value={step.submitTrigger.selector}
+                                      onChange={(e) => {
+                                        const newSteps = [...(formData.formSteps || [])]
+                                        newSteps[stepIndex] = { 
+                                          ...newSteps[stepIndex], 
+                                          submitTrigger: { ...newSteps[stepIndex].submitTrigger!, selector: e.target.value }
+                                        }
+                                        setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                      }}
+                                      className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                                      placeholder="Submit Button Selector"
+                                    />
+                                    <Input
+                                      type="number"
+                                      value={step.submitTrigger.waitAfter}
+                                      onChange={(e) => {
+                                        const newSteps = [...(formData.formSteps || [])]
+                                        newSteps[stepIndex] = { 
+                                          ...newSteps[stepIndex], 
+                                          submitTrigger: { ...newSteps[stepIndex].submitTrigger!, waitAfter: parseInt(e.target.value) || 2000 }
+                                        }
+                                        setFormData(prev => ({ ...prev, formSteps: newSteps }))
+                                      }}
+                                      className="px-4 py-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60 bg-white/80 dark:bg-slate-800/80 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 transition-all duration-200 shadow-sm"
+                                      placeholder="Wait After (ms)"
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newStep = {
+                            stepName: '',
+                            formInputs: [],
+                            stepTimeout: 5000,
+                            takeScreenshotAfterFill: true,
+                            takeScreenshotAfterSubmit: true,
+                            takeScreenshotAfterValidation: false
+                          }
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            formSteps: [...(prev.formSteps || []), newStep] 
+                          }))
+                        }}
+                        className="w-full py-1 px-2 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-600 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add Form Step
+                      </button>
+                    </div>
+                  )}
+
+                  {(formData.formSteps || []).length === 0 && (
+                    <div className="text-center py-6 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg">
+                      <div className="text-slate-500 dark:text-slate-400 mb-3">
+                        <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No form steps configured</p>
+                        <p className="text-xs">Add form steps to automate multi-step form filling</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const newStep = {
+                            stepName: 'Step 1',
+                            formInputs: [],
+                            stepTimeout: 5000,
+                            takeScreenshotAfterFill: true,
+                            takeScreenshotAfterSubmit: true,
+                            takeScreenshotAfterValidation: false
+                          }
+                          setFormData(prev => ({ 
+                            ...prev, 
+                            formSteps: [newStep] 
+                          }))
+                        }}
+                        className="py-1 px-3 text-xs text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-600 rounded hover:bg-blue-50 dark:hover:bg-blue-900/30 transition-colors flex items-center gap-1 mx-auto"
+                      >
+                        <Plus className="h-3 w-3" />
+                        Add First Form Step
+                      </button>
+                    </div>
+                  )}
                     </div>
                   )}
                 </div>
